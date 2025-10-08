@@ -108,9 +108,9 @@ public class HttpRequestUtils {
             // do nothing - this is not an HTTP request (e.g. a Kafka message), and InvocationTargetException is thrown
             // ('request' is actually a proxy, never null) with the following message:
             //
-            // 'No thread-bound request found: Are you referring to request attributes outside of an actual web request,
-            // or processing a request outside of the originally receiving thread? If you are actually operating within
-            // a web request and still receive this message, your code is probably running outside of DispatcherServlet:
+            // 'No thread-bound request found: Are you referring to request attributes outside an actual web request,
+            // or processing a request outside the originally receiving thread? If you are actually operating within
+            // a web request and still receive this message, your code is probably running outside DispatcherServlet:
             // In this case, use RequestContextListener or RequestContextFilter to expose the current request.'
         }
 

@@ -1,19 +1,15 @@
 @utils #@disabled
 Feature: ReflectionUtils
 
-  Scenario: Discover class hierarchy for guru.nicks.exception.BusinessErrorCode
-    Given class name is "guru.nicks.user.domain.UserPrincipal"
+  Scenario: Discover class hierarchy for org.springframework.security.core.userdetails.User
+    Given class name is "org.springframework.security.core.userdetails.User"
     When class hierarchy is discovered
-    Then class hierarchy length should be 9
-    And class hierarchy should contain "guru.nicks.user.domain.UserPrincipal" at index 0
-    And class hierarchy should contain "org.springframework.security.core.userdetails.User" at index 1
-    And class hierarchy should contain "guru.nicks.user.domain.OpenIdUserProfile" at index 2
-    And class hierarchy should contain "org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal" at index 3
-    And class hierarchy should contain "org.springframework.security.core.CredentialsContainer" at index 4
-    And class hierarchy should contain "org.springframework.security.core.userdetails.UserDetails" at index 5
-    And class hierarchy should contain "org.springframework.security.core.AuthenticatedPrincipal" at index 6
-    And class hierarchy should contain "java.io.Serializable" at index 7
-    And class hierarchy should contain "java.lang.Object" at index 8
+    Then class hierarchy length should be 5
+    And class hierarchy should contain "org.springframework.security.core.userdetails.User" at index 0
+    And class hierarchy should contain "org.springframework.security.core.CredentialsContainer" at index 1
+    And class hierarchy should contain "org.springframework.security.core.userdetails.UserDetails" at index 2
+    And class hierarchy should contain "java.io.Serializable" at index 3
+    And class hierarchy should contain "java.lang.Object" at index 4
 
   Scenario: Discover class hierarchy for guru.nicks.exception.BusinessException
     Given class name is "guru.nicks.validation.AnnotationValidator"

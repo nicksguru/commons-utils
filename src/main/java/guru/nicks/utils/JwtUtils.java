@@ -1,7 +1,7 @@
 package guru.nicks.utils;
 
-import guru.nicks.auth.domain.CustomJwtClaim;
-import guru.nicks.user.domain.JwtProvider;
+import guru.nicks.domain.CustomJwtClaim;
+import guru.nicks.domain.JwtProvider;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import com.github.benmanes.caffeine.cache.Cache;

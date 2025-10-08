@@ -1,4 +1,4 @@
-package guru.nicks;
+package guru.nicks.utils;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -16,7 +16,7 @@ import lombok.experimental.UtilityClass;
  * annotations as {@code @Retry} should be leveraged.
  */
 @UtilityClass
-public class Resilience4jFactory {
+public class Resilience4jUtils {
 
     /**
      * Creates a retrier with default settings. By default, the delay between (3) retries is constant and equals 0.5

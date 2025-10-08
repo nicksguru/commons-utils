@@ -1,7 +1,5 @@
 package guru.nicks.utils;
 
-import guru.nicks.cache.domain.CacheConstants;
-
 import am.ik.yavi.meta.ConstraintArguments;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -20,6 +18,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,21 +44,24 @@ public class ReflectionUtils {
      * @see #getClassHierarchy(Class)
      */
     private static final Cache<Class<?>, Set<Class<?>>> CLASS_HIERARCHY_CACHE = Caffeine.newBuilder()
-            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .maximumSize(300)
+            .expireAfterAccess(Duration.ofHours(24))
             .build();
 
     /**
      * @see #getClassHierarchyMethods(Class)
      */
     private static final Cache<Class<?>, Set<Method>> CLASS_HIERARCHY_METHODS_CACHE = Caffeine.newBuilder()
-            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .maximumSize(300)
+            .expireAfterAccess(Duration.ofHours(24))
             .build();
 
     /**
      * @see #findMaterializedGenericType(Class, Class, Class)
      */
     private static final Cache<String, Class<?>> MATERIALIZED_GENERIC_TYPE_CACHE = Caffeine.newBuilder()
-            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .maximumSize(300)
+            .expireAfterAccess(Duration.ofHours(24))
             .build();
 
     /**
@@ -159,12 +161,14 @@ public class ReflectionUtils {
         String genericTypeClassName = genericType.getName();
 
         String cacheKey = new StringBuilder(whereClassName.length() + genericParentClassName.length()
-                + genericTypeClassName.length() + (2 * CacheConstants.TOPIC_DELIMITER.length()))
+                + genericTypeClassName.length()
+                // separators
+                + 2)
                 .append(whereClassName)
-                .append(CacheConstants.TOPIC_DELIMITER)
+                .append("/")
                 //
                 .append(genericParentClassName)
-                .append(CacheConstants.TOPIC_DELIMITER)
+                .append("/")
                 //
                 .append(genericTypeClassName)
                 .toString();

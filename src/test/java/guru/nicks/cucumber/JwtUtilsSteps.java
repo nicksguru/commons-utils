@@ -2,7 +2,7 @@ package guru.nicks.cucumber;
 
 import guru.nicks.cucumber.world.TextWorld;
 import guru.nicks.domain.CustomJwtClaim;
-import guru.nicks.user.domain.JwtProvider;
+import guru.nicks.domain.JwtProvider;
 import guru.nicks.utils.JwtUtils;
 
 import io.cucumber.java.After;

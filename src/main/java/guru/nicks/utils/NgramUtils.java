@@ -122,16 +122,19 @@ public class NgramUtils {
                 String word = iterator.next();
 
                 wordProcessors.add(() -> {
-                    SequencedSet<String> plainNgrams = generatePlainNgrams(word,
+                    SequencedSet<String> wordNgrams = generatePlainNgrams(word,
                             startEachWordOffset, endEachWordOffset,
                             config.getMinNgramLength(), maxNgramLength);
 
-                    SequencedSet<String> morphNgrams = generateMorphNgrams(word,
-                            startEachWordOffset, endEachWordOffset,
-                            config.getMinNgramLength(), maxNgramLength);
+                    if (config.tryMorphAnalysis()) {
+                        SequencedSet<String> morphNgrams = generateMorphNgrams(word,
+                                startEachWordOffset, endEachWordOffset,
+                                config.getMinNgramLength(), maxNgramLength);
 
-                    plainNgrams.addAll(morphNgrams);
-                    return plainNgrams;
+                        wordNgrams.addAll(morphNgrams);
+                    }
+
+                    return wordNgrams;
                 });
             }
 

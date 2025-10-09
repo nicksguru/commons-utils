@@ -17,14 +17,16 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * Try morphological analysis to add word stem ngrams to plain ones. To be precise, those are not just ordinary
-     * stems, but 'smarter stems' - in some languages, singular and plural forms of the same word are totally different
-     * words.
+     * Try morphological analysis to add stem ngrams to plain ones. To be precise, those are not just ordinary stems,
+     * but 'smart stems' - in some languages, singular and plural forms of the same word are totally different words.
      * <p>
-     * Currently, the only language supported is Russian, and the size of the dictionary read to RAM is 110Mb.
+     * The only language supported is Russian, and the size of the dictionary read to RAM is 110Mb. For English, there's
+     * no such need - infix ngrams are sufficient.
+     *
+     * @return {@code false} by default
      */
     default boolean tryMorphAnalysis() {
-        return true;
+        return false;
     }
 
     /**

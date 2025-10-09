@@ -14,7 +14,7 @@
     <artifactId>utils</artifactId>
     <version>${project.parent.version}</version>
 
-    <name>Utils</name>
+    <name>Commons Utils</name>
     <description>Utility classes</description>
     <url>https://nicks.guru</url>
 

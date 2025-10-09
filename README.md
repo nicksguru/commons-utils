@@ -1,4 +1,6 @@
-# Utils
+# Commons Utils
+
+Utility classes.
 
 ## Usage
 

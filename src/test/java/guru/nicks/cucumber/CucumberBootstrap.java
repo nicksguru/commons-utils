@@ -3,6 +3,7 @@ package guru.nicks.cucumber;
 import guru.nicks.cucumber.world.CsvUtilsWorld;
 import guru.nicks.cucumber.world.NumberWorld;
 import guru.nicks.cucumber.world.TextWorld;
+import guru.nicks.test.TestCustomEpochConfig;
 import guru.nicks.validation.AnnotationValidator;
 
 import io.cucumber.spring.CucumberContextConfiguration;
@@ -19,7 +20,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
         // scenario-scoped states
         TextWorld.class, NumberWorld.class, CsvUtilsWorld.class,
         // beans
-        AnnotationValidator.class, LocalValidatorFactoryBean.class
+        AnnotationValidator.class, LocalValidatorFactoryBean.class, TestCustomEpochConfig.class
 })
 public class CucumberBootstrap {
 }

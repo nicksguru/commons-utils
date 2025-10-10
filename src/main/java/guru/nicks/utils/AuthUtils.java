@@ -1,6 +1,6 @@
 package guru.nicks.utils;
 
-import guru.nicks.domain.BasicAuthCredentials;
+import guru.nicks.auth.domain.BasicAuthCredentials;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import lombok.experimental.UtilityClass;

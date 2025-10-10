@@ -1,4 +1,4 @@
-package guru.nicks.domain;
+package guru.nicks.auth.domain;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;

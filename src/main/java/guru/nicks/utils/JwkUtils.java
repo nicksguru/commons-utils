@@ -1,6 +1,6 @@
 package guru.nicks.utils;
 
-import guru.nicks.domain.JwkInfo;
+import guru.nicks.auth.domain.JwkInfo;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import com.nimbusds.jose.JOSEException;

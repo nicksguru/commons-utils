@@ -1,4 +1,4 @@
-package guru.nicks.domain;
+package guru.nicks.auth.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.validation.ValidationException;

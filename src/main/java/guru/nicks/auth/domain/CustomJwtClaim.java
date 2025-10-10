@@ -1,4 +1,4 @@
-package guru.nicks.domain;
+package guru.nicks.auth.domain;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

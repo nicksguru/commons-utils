@@ -1,6 +1,6 @@
 package guru.nicks.cucumber;
 
-import guru.nicks.domain.JwkInfo;
+import guru.nicks.auth.domain.JwkInfo;
 import guru.nicks.utils.JwkUtils;
 import guru.nicks.utils.PemUtils;
 

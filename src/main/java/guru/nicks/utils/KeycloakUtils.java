@@ -1,6 +1,6 @@
 package guru.nicks.utils;
 
-import guru.nicks.domain.CustomJwtClaim;
+import guru.nicks.auth.domain.CustomJwtClaim;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import lombok.experimental.UtilityClass;

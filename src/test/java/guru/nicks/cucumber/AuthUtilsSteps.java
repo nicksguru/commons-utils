@@ -1,7 +1,7 @@
 package guru.nicks.cucumber;
 
+import guru.nicks.auth.domain.BasicAuthCredentials;
 import guru.nicks.cucumber.world.TextWorld;
-import guru.nicks.domain.BasicAuthCredentials;
 import guru.nicks.utils.AuthUtils;
 
 import io.cucumber.java.DataTableType;

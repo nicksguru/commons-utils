@@ -1,4 +1,4 @@
-package guru.nicks.domain;
+package guru.nicks.auth.domain;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import lombok.Builder;

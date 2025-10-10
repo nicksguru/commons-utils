@@ -1,5 +1,7 @@
 package guru.nicks.utils;
 
+import guru.nicks.cache.domain.CacheConstants;
+
 import am.ik.yavi.meta.ConstraintArguments;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -44,7 +46,7 @@ public class ReflectionUtils {
      * @see #getClassHierarchy(Class)
      */
     private static final Cache<Class<?>, Set<Class<?>>> CLASS_HIERARCHY_CACHE = Caffeine.newBuilder()
-            .maximumSize(300)
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
             .expireAfterAccess(Duration.ofHours(24))
             .build();
 
@@ -52,7 +54,7 @@ public class ReflectionUtils {
      * @see #getClassHierarchyMethods(Class)
      */
     private static final Cache<Class<?>, Set<Method>> CLASS_HIERARCHY_METHODS_CACHE = Caffeine.newBuilder()
-            .maximumSize(300)
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
             .expireAfterAccess(Duration.ofHours(24))
             .build();
 
@@ -60,7 +62,7 @@ public class ReflectionUtils {
      * @see #findMaterializedGenericType(Class, Class, Class)
      */
     private static final Cache<String, Class<?>> MATERIALIZED_GENERIC_TYPE_CACHE = Caffeine.newBuilder()
-            .maximumSize(300)
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
             .expireAfterAccess(Duration.ofHours(24))
             .build();
 

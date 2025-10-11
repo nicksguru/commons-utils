@@ -5,7 +5,7 @@
     <parent>
         <groupId>guru.nicks.commons</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0-alpha.18</version><!-- [BVM] -->
+        <version>0.1.0-alpha.19</version><!-- [BVM] -->
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -45,6 +45,12 @@
             <groupId>guru.nicks.commons</groupId>
             <artifactId>cucumber-test-starter</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Page -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
         </dependency>
 
         <dependency>

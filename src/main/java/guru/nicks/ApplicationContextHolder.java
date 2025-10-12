@@ -11,6 +11,8 @@ import java.util.Optional;
 /**
  * Helper class which stores {@link ApplicationContext} in a static manner, for access from non-wired classes. It's
  * advisable to use beans instead whenever possible.
+ *
+ * @see guru.nicks.listener.ApplicationContextHolderListener
  */
 @UtilityClass
 @Slf4j

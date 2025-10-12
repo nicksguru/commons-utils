@@ -235,7 +235,7 @@ public class ResourceUtils {
             String newTag = null;
 
             try {
-                newTag = Optional.of(ApplicationContextHolder.getApplicationContext())
+                newTag = ApplicationContextHolder.findApplicationContext()
                         .map(context -> context.getBean(GitProperties.class))
                         .map(GitProperties::getCommitId)
                         .filter(StringUtils::isNotBlank)

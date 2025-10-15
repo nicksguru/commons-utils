@@ -2,7 +2,6 @@ package guru.nicks.exception;
 
 import guru.nicks.exception.http.NotFoundException;
 
-import jakarta.annotation.Nullable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.StandardException;
@@ -35,7 +34,7 @@ public abstract class BusinessException extends RuntimeException {
     @Getter
     private Map<String, Object> additionalResponseHeaders;
 
-    protected BusinessException(@Nullable Map<String, Object> additionalResponseHeaders) {
+    protected BusinessException(Map<String, Object> additionalResponseHeaders) {
         super();
 
         // convert header names to lowercase for consistency, for example in case caller reads them by known names

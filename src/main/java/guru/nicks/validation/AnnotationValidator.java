@@ -17,13 +17,16 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 
 import static java.util.function.Predicate.not;
 
 /**
  * Annotation-based object validator.
+ *
+ * @see #validate(Object)
  */
 @Component
 @RequiredArgsConstructor
@@ -58,12 +61,12 @@ public class AnnotationValidator {
      *                             {@link ValidationException#getCause()})
      */
     public void validate(Object obj) {
-        // avoid circular references - keep track of already visited objects
-        var seen = new HashSet<>();
+        // track by object identity, not by equals()
+        var seen = Collections.newSetFromMap(new IdentityHashMap<>());
         validate(obj, seen);
     }
 
-    private void validate(@Nullable Object obj, Set<Object> seen) {
+    private void validate(@Nullable Object obj, Collection<Object> seen) {
         if ((obj == null) || seen.contains(obj)) {
             return;
         }

@@ -3,8 +3,6 @@ package guru.nicks.listener;
 import guru.nicks.ApplicationContextHolder;
 import guru.nicks.log.domain.LogContext;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.ApplicationContextEvent;
@@ -25,8 +23,6 @@ import java.util.function.Consumer;
  * </ul>
  */
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class ApplicationContextHolderListener {
 
     private final List<Consumer<ApplicationContextEvent>> steps = List.of(
@@ -38,13 +34,17 @@ public class ApplicationContextHolderListener {
      */
     @EventListener(ContextRefreshedEvent.class)
     public void onContextRefreshedEvent(ContextRefreshedEvent event) {
+        // this should never be null, but just in case
+        if (event == null) {
+            return;
+        }
+
         steps.forEach(step ->
                 step.accept(event));
     }
 
     private void storeApplicationNameInLogContext(ApplicationContextEvent event) {
-        Optional.of(event)
-                .map(ApplicationContextEvent::getApplicationContext)
+        Optional.ofNullable(event.getApplicationContext())
                 .map(ApplicationContext::getEnvironment)
                 .map(env -> env.getProperty(ApplicationContextHolder.SPRING_APPLICATION_NAME_PROPERTY))
                 .filter(StringUtils::isNotBlank)
@@ -52,7 +52,8 @@ public class ApplicationContextHolderListener {
     }
 
     private void storeApplicationContextInGlobalHolder(ApplicationContextEvent event) {
-        ApplicationContextHolder.setApplicationContext(event.getApplicationContext());
+        Optional.ofNullable(event.getApplicationContext())
+                .ifPresent(ApplicationContextHolder::setApplicationContext);
     }
 
 }

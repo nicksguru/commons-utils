@@ -2,6 +2,7 @@ package guru.nicks.exception;
 
 import guru.nicks.utils.ReflectionUtils;
 
+import jakarta.annotation.Nonnull;
 import org.springframework.core.convert.converter.Converter;
 
 import java.lang.invoke.MethodHandles;
@@ -32,7 +33,7 @@ public interface ExceptionConverter<S extends Throwable, T extends BusinessExcep
      * @return converted exception
      */
     @Override
-    default T convert(S cause) {
+    default T convert(@Nonnull S cause) {
         return ReflectionUtils.instantiateWithConstructor(getTargetClass(), cause);
     }
 

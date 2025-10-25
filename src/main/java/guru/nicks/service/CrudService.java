@@ -73,11 +73,10 @@ public interface CrudService<T, ID> {
     Optional<T> findById(ID id);
 
     /**
-     * Retrieves entity by ID.
+     * Retrieves entity by ID. Throws 'T not found exception' (a subclass of {@link NotFoundException}) if not found.
      *
      * @param id entity ID
      * @return entity
-     * @throws NotFoundException no such entity
      */
     T getByIdOrThrow(ID id);
 

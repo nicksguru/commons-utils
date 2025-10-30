@@ -13,7 +13,12 @@ import java.lang.annotation.Target;
  * not an empty string, not whitespaces-only.
  */
 @Conditional(OnPropertyNotBlankCondition.class)
-@Target(ElementType.TYPE)
+@Target({
+        // for @Component
+        ElementType.TYPE,
+        // for @Bean
+        ElementType.METHOD
+})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ConditionalOnPropertyNotBlank {

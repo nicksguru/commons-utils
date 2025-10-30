@@ -103,9 +103,10 @@ public class HttpRequestUtils {
         String headerValue = null;
 
         try {
+            // don't call request.getLocales() - it returns server locale if there's no explicitly set header
             headerValue = request.getHeader(HttpHeaders.ACCEPT_LANGUAGE);
         } catch (RuntimeException e) {
-            // do nothing - this is not an HTTP request (e.g. a Kafka message), and InvocationTargetException is thrown
+            // do nothing - this is not an HTTP request (e.g. a Kafka message), InvocationTargetException is thrown
             // ('request' is actually a proxy, never null) with the following message:
             //
             // 'No thread-bound request found: Are you referring to request attributes outside an actual web request,

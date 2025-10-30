@@ -31,9 +31,8 @@ public class ChecksumUtils {
     private static final Function<byte[], String> BINARY_ENCODER = Base64.getEncoder()::encodeToString;
 
     /**
-     * Computes checksum by first {@link JsonUtils#sortObjectKeys(Object) serializing} the given object (if it's not
-     * scalar or null) and then feeding it to SHA-256. For caveats and exceptions thrown, see
-     * {@link JsonUtils#sortObjectKeys(Object)}.
+     * Computes checksum by first serializing the given object and then feeding it to SHA-256. For caveats and
+     * exceptions thrown, see {@link JsonUtils#sortObjectKeys(Object) serializer}.
      * <p>
      * WARNING: to store a checksum in DB, column text-sensitivity must be ensured because Base64 is case-sensitive:
      * <ul>

@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.SequencedSet;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
@@ -107,11 +108,11 @@ public class JsonUtils {
      * <ul>
      *  <li>{@code null} is treated as-is</li>
      *  <li>for a non-null {@link ReflectionUtils#isScalar(Object) scalar}, {@link Object#toString()} is called</li>
-     *  <li>a non-scalar is serialized with {@link ObjectMapper}</li>
+     *  <li>a non-scalar is serialized with a custom {@link ObjectMapper} instance that sorts {@link Map} keys</li>
      * </ul>
      *
-     * @param obj object to encode (a {@link Set} is converted to a {@link TreeSet} to ensure predictable key order, but
-     *            all elements must be {@link Comparable} in this case)
+     * @param obj object to encode (a {@link Set} which is not {@link SortedSet} is converted to a {@link TreeSet} to
+     *            ensure predictable key order, but all elements must be {@link Comparable} in this case)
      * @return JSON / scalar / {@code null} (if the argument is {@code null})
      * @throws IllegalArgumentException JSON creation error
      * @throws NullPointerException     if {@link TreeSet} failed to sort the original unsorted {@link Set} (see

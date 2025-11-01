@@ -5,7 +5,6 @@ import one.nio.serial.DeserializeStream;
 import one.nio.serial.PersistStream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.SerializationException;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.io.IOException;
  * Serializes / deserializes / clones objects using OneNio.
  */
 @Component
-@Primary
 public class OneNioSerializer implements NativeJavaSerializer {
 
     @Override

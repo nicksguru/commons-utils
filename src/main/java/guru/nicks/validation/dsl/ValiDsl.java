@@ -73,7 +73,7 @@ public class ValiDsl {
      * @throws IllegalArgumentException the value is {@code null}, or empty, or whitespaces-only
      * @see StringValidationContext#notBlank()
      */
-    public static String checkNotBlank(String value, String name) {
+    public static String checkNotBlank(@Nullable String value, String name) {
         if (StringUtils.isBlank(value)) {
             String message = ValidationMessage.NOT_BLANK.format(name);
             throw new IllegalArgumentException(message);

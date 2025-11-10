@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Typical CRUD methods.
+ * Common CRUD methods.
  *
  * @param <T>  entity type
  * @param <ID> primary key type

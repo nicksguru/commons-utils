@@ -11,11 +11,11 @@ Feature: ReflectionUtils
     And class hierarchy should contain "java.io.Serializable" at index 3
     And class hierarchy should contain "java.lang.Object" at index 4
 
-  Scenario: Discover class hierarchy for guru.nicks.exception.BusinessException
-    Given class name is "guru.nicks.validation.AnnotationValidator"
+  Scenario: Discover class hierarchy for guru.nicks.commons.validation.AnnotationValidator
+    Given class name is "guru.nicks.commons.validation.AnnotationValidator"
     When class hierarchy is discovered
     Then class hierarchy length should be 2
-    And class hierarchy should contain "guru.nicks.validation.AnnotationValidator" at index 0
+    And class hierarchy should contain "guru.nicks.commons.validation.AnnotationValidator" at index 0
     And class hierarchy should contain "java.lang.Object" at index 1
 
   Scenario Outline: Detecting scalar types

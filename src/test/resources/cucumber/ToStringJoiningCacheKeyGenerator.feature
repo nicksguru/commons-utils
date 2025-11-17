@@ -22,7 +22,7 @@ Feature: ToStringJoiningCacheKeyGenerator
     And no exception should be thrown
 
   Scenario: Generating a cache key with empty parameters
-    When a cache key is generated with parameters "" and ""
+    When a cache key is generated with string parameters "" and ""
     Then the generated key should be "::"
     And no exception should be thrown
 
@@ -38,7 +38,7 @@ Feature: ToStringJoiningCacheKeyGenerator
     And no exception should be thrown
 
   Scenario Outline: Generating cache keys with different parameter combinations
-    When a cache key is generated with parameters "<param1>" and "<param2>"
+    When a cache key is generated with string parameters "<param1>" and "<param2>"
     Then the generated key should be "<expectedKey>"
     And no exception should be thrown
     Examples:

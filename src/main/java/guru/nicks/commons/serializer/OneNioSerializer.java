@@ -5,12 +5,22 @@ import one.nio.serial.DeserializeStream;
 import one.nio.serial.PersistStream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.SerializationException;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
+import java.io.Externalizable;
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Map;
 
 /**
- * Serializes / deserializes / clones objects using OneNio.
+ * Serializes / deserializes / clones objects using OneNio. To switch to another implementation, replace this bean with
+ * a {@link Primary @Primary} one.
+ * <p>
+ * WARNING: as per <a href="https://github.com/odnoklassniki/one-nio/wiki/Serialization-FAQ">this article</a>, only
+ * classes implementing {@link Serializable} / {@link Externalizable} interfaces are serialized, others fail with
+ * 'Invalid serializer' error. {@link Collection}, {@link Map}, {@link Enum}, and primitives are serialized seamlessly.
  */
 @Component
 public class OneNioSerializer implements NativeJavaSerializer {

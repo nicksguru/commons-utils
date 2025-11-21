@@ -2,8 +2,8 @@ package guru.nicks.commons.sortableid;
 
 import guru.nicks.commons.encoder.Checksummer;
 import guru.nicks.commons.encoder.Encoder;
-import guru.nicks.commons.utils.ChecksumUtils;
-import guru.nicks.commons.utils.HashUtils;
+import guru.nicks.commons.utils.crypto.HashUtils;
+import guru.nicks.commons.utils.crypto.ChecksumUtils;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;

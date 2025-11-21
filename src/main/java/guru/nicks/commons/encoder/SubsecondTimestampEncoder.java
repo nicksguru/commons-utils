@@ -1,6 +1,6 @@
 package guru.nicks.commons.encoder;
 
-import guru.nicks.commons.utils.TimeUtils;
+import guru.nicks.commons.utils.text.TimeUtils;
 
 import am.ik.yavi.meta.ConstraintArguments;
 

@@ -2,7 +2,7 @@ package guru.nicks.commons.cucumber.cache;
 
 import guru.nicks.commons.cache.ChecksumCacheKeyGenerator;
 import guru.nicks.commons.cache.domain.CacheConstants;
-import guru.nicks.commons.utils.ChecksumUtils;
+import guru.nicks.commons.utils.crypto.ChecksumUtils;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;

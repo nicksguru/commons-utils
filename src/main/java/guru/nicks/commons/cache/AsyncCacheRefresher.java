@@ -1,6 +1,6 @@
 package guru.nicks.commons.cache;
 
-import guru.nicks.commons.utils.TimeUtils;
+import guru.nicks.commons.utils.text.TimeUtils;
 
 import jakarta.annotation.Nullable;
 

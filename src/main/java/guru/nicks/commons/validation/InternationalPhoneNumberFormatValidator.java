@@ -1,6 +1,6 @@
 package guru.nicks.commons.validation;
 
-import guru.nicks.commons.utils.PhoneNumberUtils;
+import guru.nicks.commons.utils.text.PhoneNumberUtils;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

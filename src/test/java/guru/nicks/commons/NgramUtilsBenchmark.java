@@ -1,7 +1,7 @@
 package guru.nicks.commons;
 
-import guru.nicks.commons.utils.NgramUtils;
-import guru.nicks.commons.utils.NgramUtilsConfig;
+import guru.nicks.commons.utils.text.NgramUtils;
+import guru.nicks.commons.utils.text.NgramUtilsConfig;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.openjdk.jmh.annotations.Benchmark;

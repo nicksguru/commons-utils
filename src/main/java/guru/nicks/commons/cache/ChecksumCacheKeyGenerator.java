@@ -1,7 +1,7 @@
 package guru.nicks.commons.cache;
 
 import guru.nicks.commons.cache.domain.CacheConstants;
-import guru.nicks.commons.utils.ChecksumUtils;
+import guru.nicks.commons.utils.crypto.ChecksumUtils;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.interceptor.KeyGenerator;

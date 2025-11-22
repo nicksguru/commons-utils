@@ -81,13 +81,15 @@ public class HttpRequestUtils {
      * @return client IP address (or hostname in such cases when IP failed to parse)
      */
     public static String getRemoteIpBehindProxy(HttpServletRequest request) {
-        return POSSIBLE_PROXIED_CLIENT_IP_HEADERS.stream()
+        Optional<String> proxiedIp = POSSIBLE_PROXIED_CLIENT_IP_HEADERS.stream()
                 .map(request::getHeader)
                 .filter(StringUtils::isNotBlank)
                 .filter(not("unknown"::equalsIgnoreCase))
                 .filter(InetAddresses::isInetAddress)
-                .findFirst()
-                .orElseGet(request::getRemoteAddr);
+                .findFirst();
+
+        // room for breakpoint
+        return proxiedIp.orElseGet(request::getRemoteAddr);
     }
 
     /**

@@ -1,6 +1,7 @@
-package guru.nicks.commons.utils.crypto;
+package guru.nicks.commons.cucumber.crypto;
 
 import guru.nicks.commons.cucumber.world.TextWorld;
+import guru.nicks.commons.utils.crypto.FpeUtils;
 import guru.nicks.commons.utils.crypto.FpeUtils.SequenceEncryptor;
 
 import io.cucumber.java.After;
@@ -16,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -72,22 +74,37 @@ public class FpeUtilsSteps {
                 FpeUtils.createFf1SequenceEncryptor(
                         creationRequest.isSupplierIsNull() ? null : nextValueSupplier,
                         creationRequest.getZeroPadValueDigits(),
-                        StringUtils.isNotBlank(creationRequest.getKey()) ? creationRequest.getKey() : null,
-                        StringUtils.isNotBlank(creationRequest.getTweak()) ? creationRequest.getTweak() : null
+                        StringUtils.isNotBlank(creationRequest.getKey())
+                                ? creationRequest.getKey().getBytes(StandardCharsets.UTF_8)
+                                : null,
+                        StringUtils.isNotBlank(creationRequest.getTweak())
+                                ? creationRequest.getTweak().getBytes(StandardCharsets.UTF_8)
+                                : null
                 )
         );
+
         textWorld.setLastException(throwable);
     }
 
     @Given("an FF1 sequence encryptor is created with key {string}, tweak {string}, and padding of {int} digits")
     public void anFf1SequenceEncryptorIsCreatedWithKeyTweakAndPaddingOfDigits(String key, String tweak, int padding) {
-        sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(nextValueSupplier, padding, key, tweak);
+        textWorld.setLastException(catchThrowable(() ->
+                sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(nextValueSupplier, padding,
+                        key.getBytes(StandardCharsets.UTF_8),
+                        tweak.getBytes(StandardCharsets.UTF_8))));
     }
 
     @Given("the sequence value supplier will return {long}")
     public void theSequenceValueSupplierWillReturn(long sequenceValue) {
         when(nextValueSupplier.get())
                 .thenReturn(sequenceValue);
+    }
+
+    @Given("the sequence number supplier will return {long} and then {long}")
+    public void theSequenceNumberSupplierWillReturnsAndThen(long value1, long value2) {
+        when(nextValueSupplier.get())
+                .thenReturn(value1)
+                .thenReturn(value2);
     }
 
     @When("the next encrypted value is requested")
@@ -119,6 +136,13 @@ public class FpeUtilsSteps {
         var throwable = catchThrowable(() ->
                 decryptedValue = sequenceEncryptor.decrypt(encryptedValue));
         textWorld.setLastException(throwable);
+    }
+
+    @Then("the encrypted value should be {string}")
+    public void theEncryptedValueShouldBe(String expected) {
+        assertThat(encryptedValue)
+                .as("encryptedValue")
+                .isEqualTo(expected);
     }
 
     @Value

@@ -6,19 +6,15 @@ import guru.nicks.commons.utils.crypto.FpeUtils.SequenceEncryptor;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
-import io.cucumber.java.DataTableType;
+import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
-import org.apache.commons.lang3.StringUtils;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,26 +28,13 @@ public class FpeUtilsSteps {
     private final TextWorld textWorld;
 
     @Mock
-    private Supplier<Long> nextValueSupplier;
+    private Supplier<String> nextValueSupplier;
     private AutoCloseable closeableMocks;
 
     private SequenceEncryptor sequenceEncryptor;
-    private EncryptorCreationRequest creationRequest;
 
     private String encryptedValue;
-    private long decryptedValue;
-
-    @DataTableType
-    public EncryptorCreationRequest createEncryptorCreationRequest(Map<String, String> row) {
-        return EncryptorCreationRequest.builder()
-                .zeroPadValueDigits(Integer.parseInt(
-                        row.get("zeroPadValueDigits")))
-                .key(row.get("key"))
-                .tweak(row.get("tweak"))
-                .supplierIsNull(Boolean.parseBoolean(
-                        row.get("supplierIsNull")))
-                .build();
-    }
+    private String decryptedValue;
 
     @Before
     public void beforeEachScenario() {
@@ -63,45 +46,27 @@ public class FpeUtilsSteps {
         closeableMocks.close();
     }
 
-    @Given("an FF1 sequence encryptor is created with the following arguments")
-    public void anFf1SequenceEncryptorIsCreatedWithTheFollowingArguments(EncryptorCreationRequest creationRequest) {
-        this.creationRequest = creationRequest;
-    }
-
-    @When("the encryptor is instantiated")
-    public void theEncryptorIsInstantiated() {
-        var throwable = catchThrowable(() ->
-                FpeUtils.createFf1SequenceEncryptor(
-                        creationRequest.isSupplierIsNull() ? null : nextValueSupplier,
-                        creationRequest.getZeroPadValueDigits(),
-                        StringUtils.isNotBlank(creationRequest.getKey())
-                                ? creationRequest.getKey().getBytes(StandardCharsets.UTF_8)
-                                : null,
-                        StringUtils.isNotBlank(creationRequest.getTweak())
-                                ? creationRequest.getTweak().getBytes(StandardCharsets.UTF_8)
-                                : null
-                )
-        );
-
-        textWorld.setLastException(throwable);
-    }
-
-    @Given("an FF1 sequence encryptor is created with key {string}, tweak {string}, and padding of {int} digits")
-    public void anFf1SequenceEncryptorIsCreatedWithKeyTweakAndPaddingOfDigits(String key, String tweak, int padding) {
+    @Given("an FF1 sequence encryptor is created with key {string}, tweak {string}, alphabet {string}, and padding to {int} positions")
+    public void anFf1SequenceEncryptorIsCreatedWithKeyTweakAndPaddingOfDigits(String key, String tweak,
+            String alphabet, int padding) {
         textWorld.setLastException(catchThrowable(() ->
-                sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(nextValueSupplier, padding,
+                sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(nextValueSupplier,
+                        alphabet,
+                        padding,
+                        // pad with the first character of the alphabet
+                        alphabet.charAt(0),
                         key.getBytes(StandardCharsets.UTF_8),
                         tweak.getBytes(StandardCharsets.UTF_8))));
     }
 
-    @Given("the sequence value supplier will return {long}")
-    public void theSequenceValueSupplierWillReturn(long sequenceValue) {
+    @Given("the sequence value supplier will return {string}")
+    public void theSequenceValueSupplierWillReturn(String sequenceValue) {
         when(nextValueSupplier.get())
-                .thenReturn(sequenceValue);
+                .thenReturn(String.valueOf(sequenceValue));
     }
 
-    @Given("the sequence number supplier will return {long} and then {long}")
-    public void theSequenceNumberSupplierWillReturnsAndThen(long value1, long value2) {
+    @Given("the sequence number supplier will return {string} and then {string}")
+    public void theSequenceNumberSupplierWillReturnsAndThen(String value1, String value2) {
         when(nextValueSupplier.get())
                 .thenReturn(value1)
                 .thenReturn(value2);
@@ -110,7 +75,7 @@ public class FpeUtilsSteps {
     @When("the next encrypted value is requested")
     public void theNextEncryptedValueIsRequested() {
         var throwable = catchThrowable(() ->
-                encryptedValue = sequenceEncryptor.getNext());
+                encryptedValue = sequenceEncryptor.getNextEncrypted());
         textWorld.setLastException(throwable);
     }
 
@@ -121,9 +86,10 @@ public class FpeUtilsSteps {
                 .isNotBlank();
     }
 
-    @Then("decrypting the value returns {long}")
-    public void decryptingTheValueReturns(long expectedValue) {
-        var throwable = catchThrowable(() -> decryptedValue = sequenceEncryptor.decrypt(encryptedValue));
+    @Then("decrypting the value returns {string}")
+    public void decryptingTheValueReturns(String expectedValue) {
+        var throwable = catchThrowable(() ->
+                decryptedValue = sequenceEncryptor.decrypt(encryptedValue));
         textWorld.setLastException(throwable);
 
         assertThat(decryptedValue)
@@ -138,21 +104,11 @@ public class FpeUtilsSteps {
         textWorld.setLastException(throwable);
     }
 
-    @Then("the encrypted value should be {string}")
-    public void theEncryptedValueShouldBe(String expected) {
+    @And("the encrypted value should be {string}")
+    public void theEncryptedValueShouldBe(String value) {
         assertThat(encryptedValue)
                 .as("encryptedValue")
-                .isEqualTo(expected);
-    }
-
-    @Value
-    @Builder
-    public static class EncryptorCreationRequest {
-
-        Integer zeroPadValueDigits;
-        String key;
-        String tweak;
-        boolean supplierIsNull;
+                .isEqualTo(value);
 
     }
 }

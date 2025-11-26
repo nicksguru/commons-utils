@@ -1,6 +1,7 @@
-package guru.nicks.commons.compressor;
+package guru.nicks.commons.cucumber.compressor;
 
 import guru.nicks.commons.cucumber.world.TextWorld;
+import guru.nicks.commons.utils.compressor.ZipCompressorUtils;
 import guru.nicks.commons.utils.compressor.ZstdCompressorUtils;
 
 import io.cucumber.java.en.Given;
@@ -17,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Step definitions for testing {@link ZstdCompressorUtils}.
  */
 @RequiredArgsConstructor
-public class ZstdCompressorUtilsSteps {
+public class ZipCompressorUtilsSteps {
 
     // DI
     private final TextWorld textWorld;
@@ -25,59 +26,59 @@ public class ZstdCompressorUtilsSteps {
     private byte[] inputData;
     private byte[] compressedData;
 
-    @Given("data to zstd-compress {string}")
-    public void dataToCompress(String input) {
+    @Given("data to zip-compress {string}")
+    public void dataToZipCompress(String input) {
         inputData = input.getBytes(StandardCharsets.UTF_8);
     }
 
-    @Given("data to zstd-compress is null")
-    public void dataToCompressIsNull() {
+    @Given("data to zip-compress is null")
+    public void dataToZipCompressIsNull() {
         inputData = null;
     }
 
-    @Given("invalid zstd-compressed data")
-    public void invalidZstdCompressedData() {
-        // generate random bytes that are not valid Zstd compressed data
+    @Given("invalid zip-compressed data")
+    public void invalidZipCompressedData() {
+        // generate random bytes that are not valid Zip compressed data
         var random = new Random();
         inputData = new byte[20];
         random.nextBytes(inputData);
     }
 
-    @When("the data is compressed using Zstd")
-    public void theDataIsCompressedUsingZstd() {
+    @When("the data is compressed using Zip")
+    public void theDataIsCompressedUsingZip() {
         try {
-            compressedData = ZstdCompressorUtils.compress(inputData);
+            compressedData = ZipCompressorUtils.compress(inputData);
         } catch (Exception e) {
             textWorld.setLastException(e);
         }
     }
 
-    @When("the data is decompressed using Zstd")
-    public void theDataIsDecompressedUsingZstd() {
+    @When("the data is decompressed using Zip")
+    public void theDataIsDecompressedUsingZip() {
         try {
-            ZstdCompressorUtils.decompress(inputData);
+            ZipCompressorUtils.decompress(inputData);
         } catch (Exception e) {
             textWorld.setLastException(e);
         }
     }
 
-    @Then("the zstd-compressed data should not be empty")
-    public void theZstdCompressedDataShouldNotBeEmpty() {
+    @Then("the zip-compressed data should not be empty")
+    public void theZipCompressedDataShouldNotBeEmpty() {
         assertThat(compressedData)
                 .as("compressedData")
                 .isNotEmpty();
     }
 
-    @Then("the zstd-compressed data should be different from original")
-    public void theZstdCompressedDataShouldBeDifferentFromOriginal() {
+    @Then("the zip-compressed data should be different from original")
+    public void theZipCompressedDataShouldBeDifferentFromOriginal() {
         assertThat(compressedData)
                 .as("compressedData")
                 .isNotEqualTo(inputData);
     }
 
-    @Then("the zstd-compressed data should be decompressable back to original")
-    public void theZstdCompressedDataShouldBeDecompressableBackToOriginal() {
-        byte[] decompressed = ZstdCompressorUtils.decompress(compressedData);
+    @Then("the zip-compressed data should be decompressable back to original")
+    public void theZipCompressedDataShouldBeDecompressableBackToOriginal() {
+        byte[] decompressed = ZipCompressorUtils.decompress(compressedData);
 
         assertThat(decompressed)
                 .as("decompressedData")

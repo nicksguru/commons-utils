@@ -9,9 +9,12 @@ import org.bouncycastle.crypto.fpe.FPEFF1Engine;
 import org.bouncycastle.crypto.params.FPEParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotBlank;
@@ -31,12 +34,15 @@ public class FpeUtils {
      * all-zero.
      *
      * @param nextValueSupplier supplier for the next sequence value (e.g., from a database sequence)
-     * @param alphabet          alphabet, at least 10 characters (e.g. {@value #DECIMAL_ALPHABET} for integers)
-     * @param leftPadPositions  number of positions to which the sequence value will be left-padded (FF1 demands at
-     *                          least 6)
+     * @param alphabet          alphabet, at least 10 characters (e.g. {@link #DECIMAL_ALPHABET} for integers), must not
+     *                          contain duplicates
+     * @param leftPadPositions  number of positions to which the sequence value will be left-padded (FF1 requires at
+     *                          least a million variants for the input string, and since 10^6 = 1 000 000, this value
+     *                          must be at least 6 for the decimal alphabet and at least 4 for Base32 because 32^4 = 1
+     *                          048 576)
      * @param padCharacter      character to use for left-padding (e.g. '0' for integers)
      * @param key               encryption key (AES key size: 16 / 24 / 32 bytes)
-     * @param tweak             tweak (AES IV)
+     * @param tweak             tweak (AES IV), at least 7 bytes long
      * @return a new {@link SequenceEncryptor} instance.
      */
     public SequenceEncryptor createFf1SequenceEncryptor(Supplier<String> nextValueSupplier, String alphabet,
@@ -74,17 +80,22 @@ public class FpeUtils {
     static class Ff1SequenceEncryptor implements SequenceEncryptor {
 
         /**
-         * FF1 demands at least 1 000 000 variants of the input string; given the base of 10 (i.e. decimal digits),
-         * `10^6 = 1 000 000`. Other alphabets may be OK with a smaller value, but then the minimum visual size comes
-         * into effect (to hide the original sequence numbers), hence this global restriction.
+         * FF1 requires at least a million variants of the input string; given the base of 10 (decimal digits), 10^6 = 1
+         * 000 000, therefore at least 6 positions are needed. Other alphabets may be OK with a smaller value, for
+         * example, for Base32 it's 4 because 32^4 = 1 048 576.
          */
-        private static final int MIN_LEFT_PAD_POSITIONS = 6;
+        private static final int MIN_LEFT_PAD_POSITIONS = 4;
 
         private final Supplier<String> nextValueSupplier;
         private final Function<String, String> sequenceValuePadder;
         private final UnaryOperator<String> encryptorFunction;
         private final UnaryOperator<String> decryptorFunction;
-        private final String alphabet;
+
+        /**
+         * Each value is the index of the corresponding character (the key) in the alphabet.
+         */
+        private final Map<Character, Integer> alphabetIndexMap;
+
         private final char[] alphabetChars;
 
         /**
@@ -99,8 +110,10 @@ public class FpeUtils {
                     _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.NEXTVALUESUPPLIER.name());
 
             check(alphabet, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.ALPHABET.name())
-                    .lengthBetweenInclusive(10, 256);
+                    .lengthBetweenInclusive(10, 256)
+                    .constraint(str -> str.chars().distinct().count() == str.length(), "has duplicate characters");
 
+            // AES key sizes
             check(key, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.KEY.name())
                     .notNull()
                     .constraint(value -> (value.length == 16) || (value.length == 24) || (value.length == 32),
@@ -108,10 +121,18 @@ public class FpeUtils {
 
             check(tweak, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.TWEAK.name())
                     .notNull()
-                    .constraint(value -> value.length > 0, "must be non-empty");
+                    .constraint(value -> value.length >= 7, "must be at least 7 bytes long");
 
-            check(leftPadPositions, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
-                    .greaterThanOrEqual(MIN_LEFT_PAD_POSITIONS);
+            // if alphabet is decimal-only, min. payload length is 6
+            if (alphabet.chars().allMatch(chr -> (chr >= '0' && chr <= '9'))) {
+                check(leftPadPositions, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
+                        .constraint(it -> it >= 6,
+                                "must be 6 or more because FF1 requires at least a million variants");
+            } else {
+                check(leftPadPositions, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
+                        .constraint(it -> it >= MIN_LEFT_PAD_POSITIONS, "must be "
+                                + MIN_LEFT_PAD_POSITIONS + " or more because FF1 requires at least a million variants");
+            }
 
             check(padCharacter, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.PADCHARACTER.name())
                     .notNull()
@@ -120,13 +141,17 @@ public class FpeUtils {
             // can be chained with 'andThen', but each step needs to be debugged
             sequenceValuePadder = value -> StringUtils.leftPad(value, leftPadPositions, padCharacter);
 
-            this.alphabet = alphabet;
+            // store characters fast lookup in decimal2alphabet()
             this.alphabetChars = alphabet.toCharArray();
+            // store character indexes for fast lookup in alphabet2decimal()
+            alphabetIndexMap = IntStream.range(0, alphabet.length())
+                    .boxed()
+                    .collect(Collectors.toMap(alphabet::charAt, index -> index));
+
             var fpeParams = new FPEParameters(new KeyParameter(key), alphabet.length(), tweak);
 
             var encryptEngine = new FPEFF1Engine();
             encryptEngine.init(true, fpeParams);
-
             // map characters from the custom alphabet to indexes in that alphabet (thus obtaining decimal values),
             // encrypt the decimal values,
             // convert the result (a decimal number too) back to custom alphabet
@@ -192,15 +217,15 @@ public class FpeUtils {
             byte[] bytes = new byte[input.length()];
 
             for (int i = 0; i < input.length(); i++) {
-                int index = alphabet.indexOf(input.charAt(i));
+                Integer index = alphabetIndexMap.get(input.charAt(i));
 
-                // -1 means not found; 255 is max. for a byte (see below)
-                if ((index < 0) || (index > 255)) {
+                // null means not found; 255 is max. for a byte (see below)
+                if ((index == null) || (index > 255)) {
                     // don't reveal the character itself - it may be part of a password or another secret
                     throw new IllegalArgumentException("Input character is missing from the alphabet");
                 }
 
-                bytes[i] = (byte) index;
+                bytes[i] = index.byteValue();
             }
 
             return bytes;
@@ -223,8 +248,10 @@ public class FpeUtils {
                     // byte is signed in Java, so it can be negative.
                     // `b & 0xFF` converts it to an int in the range [0, 255] before using it as an index.
                     builder.append(alphabetChars[b & 0xFF]);
-                } catch (IndexOutOfBoundsException e) {
-                    throw new IllegalArgumentException("Input character is missing from the alphabet", e);
+                }
+                // this can happen if the encrypted value was created with a different alphabet.
+                catch (IndexOutOfBoundsException e) {
+                    throw new IllegalArgumentException("Invalid character index found after decryption", e);
                 }
             }
 

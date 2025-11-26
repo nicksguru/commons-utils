@@ -1,7 +1,6 @@
 package guru.nicks.commons.encoder;
 
 import am.ik.yavi.meta.ConstraintArguments;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
@@ -10,7 +9,6 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
@@ -51,11 +49,8 @@ public class BaseNSequenceEncoder implements PaddingEncoder<Long> {
         check(alphabet, _BaseNSequenceEncoderArgumentsMeta.ALPHABET.name())
                 .notBlank()
                 .lengthBetweenInclusive(2, Integer.MAX_VALUE)
-                // no whitespaces inside
                 .constraint(str -> StringUtils.deleteWhitespace(str).equals(str), "has whitespaces")
-                // no duplicate characters
-                .constraint(str -> Set.copyOf(Lists.charactersOf(str)).size() == str.length(),
-                        "has duplicate characters");
+                .constraint(str -> str.chars().distinct().count() == str.length(), "has duplicate characters");
 
         var tmpEncodeTable = new HashMap<Long, Character>();
         // populate tables

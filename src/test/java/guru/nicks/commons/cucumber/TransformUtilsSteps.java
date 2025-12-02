@@ -2,6 +2,7 @@ package guru.nicks.commons.cucumber;
 
 import guru.nicks.commons.utils.TransformUtils;
 
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.DataTableType;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -33,9 +34,10 @@ public class TransformUtilsSteps {
     private Stream<Object> inputStream;
 
     private List<?> result;
-    private Map<Object, ? extends List<?>> groupedResult;
     private List<String> resultList;
+    private Map<Object, ? extends List<?>> groupedResult;
     private Set<String> resultSet;
+    private Map<Integer, String> resultMap;
 
     private List<TestObject> testObjects = new ArrayList<>();
     private ComplexObject complexObject;
@@ -253,11 +255,6 @@ public class TransformUtilsSteps {
         }
     }
 
-    @Given("a null stream")
-    public void nullStream() {
-        inputStream = null;
-    }
-
     @When("the stream is transformed with mapping function {string}")
     public void streamIsTransformedWithMappingFunction(String functionName) {
         Function<Object, Object> mappingFunction = getMappingFunction(functionName);
@@ -325,6 +322,17 @@ public class TransformUtilsSteps {
                         .hasToString(expectedValues.get(i));
             }
         });
+    }
+
+    @When("the list is transformed to a map with string length as key")
+    public void theListIsTransformedToAMapWithTheStringAsKeyAndItsLengthAsValue() {
+        resultMap = TransformUtils.toMap(stringList, String::length);
+    }
+
+    @Then("the resulting map should contain key-value pairs:")
+    public void theResultingMapShouldContainKeyValuePairs(DataTable dataTable) {
+        Map<Integer, String> expected = dataTable.asMap(Integer.class, String.class);
+        assertThat(resultMap).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     /**

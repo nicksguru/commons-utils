@@ -8,8 +8,10 @@ import lombok.experimental.UtilityClass;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -71,7 +73,7 @@ public class TransformUtils {
      * For example, we may need class names from a list of classes, in which case {@code mapper} is
      * {@code Class::getName}.
      *
-     * @param from   source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from   source, can be {@code null}
      * @param mapper mapping function (usage of {@link Function#andThen(Function)} is encouraged, but method references
      *               can't be chained like that directly)
      * @param <T>    source list type
@@ -99,7 +101,7 @@ public class TransformUtils {
      * {@code Class::getName}, {@code mapper2} is {@code String::toUpperCase}. They can't be chained with
      * {@link Function#andThen(Function)} directly.
      *
-     * @param from    source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
      * @param mapper2 mapping function #2
      * @param <T>     source list type
@@ -119,7 +121,7 @@ public class TransformUtils {
      * Maps {@link Iterable} to list by extracting/transforming its elements. Replaces the common
      * {@code something.stream().map(mapper1).map(mapper2).map(mapper3).toList()} idiom.
      *
-     * @param from    source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
      * @param mapper2 mapping function #2
      * @param mapper3 mapping function #3
@@ -146,7 +148,7 @@ public class TransformUtils {
      * For example, we may need class names from a list of classes, in which case {@code mapper} is
      * {@link Class#getName}.
      *
-     * @param from   source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from   source, can be {@code null}
      * @param mapper mapping function (usage of {@link Function#andThen(Function)} is encouraged, but method references
      *               can't be chained like that directly)
      * @param <T>    source list type
@@ -174,7 +176,7 @@ public class TransformUtils {
      * {@code Class::getName}, {@code mapper2} is {@code String::toUpperCase}. They can't be chained with
      * {@link Function#andThen(Function)} directly.
      *
-     * @param from    source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
      * @param mapper2 mapping function #2
      * @param <T>     source list type
@@ -194,7 +196,7 @@ public class TransformUtils {
      * Maps {@link Iterable} to set by extracting/transforming its elements. Replaces the common
      * {@code something.stream().map(mapper1).map(mapper2).map(mapper3).collect(Collectors.toSet())} idiom.
      *
-     * @param from    source list (the widest scope possible - {@link Iterable}), can be {@code null}
+     * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
      * @param mapper2 mapping function #2
      * @param mapper3 mapping function #3
@@ -211,6 +213,46 @@ public class TransformUtils {
         checkNotNull(mapper2, "mapper2");
         checkNotNull(mapper3, "mapper3");
         return toSet(from, mapper1.andThen(mapper2).andThen(mapper3));
+    }
+
+    /**
+     * Maps {@link Iterable} to map. Replaces the common
+     * {@code something.stream().collect(Collectors.toMap(Something::getId, Function.identity()))} idiom.
+     *
+     * @param from         source, can be {@code null}, in which case {@code null} is returned
+     * @param keyExtractor extracts map key from {@code V}
+     * @param <K>          map key type
+     * @param <V>          map value type
+     * @return mutable map - crucial for Hibernate if this map is assigned to another entity; if it's immutable,
+     *         Hibernate can't save it because it tries to clear it first
+     */
+    public static <K, V> Map<K, V> toMap(@Nullable Iterable<V> from, Function<? super V, K> keyExtractor) {
+        return toMap(from, keyExtractor, Function.identity());
+    }
+
+    /**
+     * Maps {@link Iterable} to map. Replaces the common
+     * {@code something.stream().collect(Collectors.toMap(Something::getId, Something::getName))} idiom.
+     *
+     * @param from           source, can be {@code null}, in which case {@code null} is returned
+     * @param keyExtractor   extracts map key from {@code T}
+     * @param valueExtractor extracts map value from {@code T}
+     * @param <T>            source list type
+     * @param <K>            map key type
+     * @param <V>            map value type
+     * @return mutable map - crucial for Hibernate if this map is assigned to another entity; if it's immutable,
+     *         Hibernate can't save it because it tries to clear it first
+     */
+    public static <T, K, V> Map<K, V> toMap(@Nullable Iterable<T> from,
+            Function<? super T, K> keyExtractor, Function<? super T, V> valueExtractor) {
+        if (from == null) {
+            return new HashMap<>();
+        }
+
+        checkNotNull(keyExtractor, "keyExtractor");
+        checkNotNull(valueExtractor, "valueExtractor");
+        return createStream(from).collect(
+                Collectors.toMap(keyExtractor, valueExtractor));
     }
 
     /**

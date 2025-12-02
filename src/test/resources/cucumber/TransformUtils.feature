@@ -88,3 +88,11 @@ Feature: TransformUtils
       | input                | groupingFunction | expected                     |
       | apple,banana,avocado | firstLetter      | a:[apple,avocado],b:[banana] |
       | 1,2,3,4,5,6          | evenOdd          | even:[2,4,6],odd:[1,3,5]     |
+
+  Scenario: Collection is transformed to a map
+    Given a list of strings "apple,banana,avocado"
+    When the list is transformed to a map with string length as key
+    Then the resulting map should contain key-value pairs:
+      | 5 | apple   |
+      | 6 | banana  |
+      | 7 | avocado |

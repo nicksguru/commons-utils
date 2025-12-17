@@ -132,9 +132,9 @@ public class ReflectionUtils {
     /**
      * Given:
      * <ul>
-     *  <li>{@code genericParent = class Generic<T, U>} (or an interface)</li>
-     *  <li>{@code where = class Concrete extends Generic<ConcreteT, ConcreteU>}
-     *      (directly or somewhere in the hierarchy class)</li>
+     *  <li>{@code genericParent = interface/class Generic<T, U>}</li>
+     *  <li>{@code where = class Concrete implements/extends Generic<ConcreteT, ConcreteU>}
+     *      (directly or somewhere in the hierarchy)</li>
      *  <li>{@code genericType = T} (or any of its parent types)</li>
      * </ul> - returns {@code ConcreteT}. Searches in {@code where}'s full hierarchy graph.
      * <p>

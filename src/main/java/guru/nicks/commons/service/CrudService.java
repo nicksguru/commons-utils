@@ -5,10 +5,10 @@ import guru.nicks.commons.exception.http.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 /**
  * Common CRUD methods.
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  * @param <ID> primary key type
  */
 @SuppressWarnings("java:S119")  // allow type names like 'ID'
-public interface CrudService<T, ID> {
+public interface CrudService<T, ID extends Serializable> {
 
     /**
      * Saves (i.e. inserts/updates) entity in DB.
@@ -87,17 +87,6 @@ public interface CrudService<T, ID> {
      * @return elements in the same order as in {@code ids}
      */
     List<T> findAllByIdPreserveOrder(Collection<ID> ids);
-
-    /**
-     * Fetches all documents using DB cursor. Faster than {@link #findAll(Pageable)}.
-     * <p>
-     * WARNING: requires {@code try-with-resources}! Also, in case of JPA, consider calling
-     * {@code EntityManager#detach(Object)} after processing each record to avoid OOM (Hibernate keeps references to the
-     * entities fetched).
-     *
-     * @return stream of objects
-     */
-    Stream<T> findAllAsStream();
 
     /**
      * Fetches a page of results.

@@ -1,5 +1,6 @@
 package guru.nicks.commons.utils;
 
+import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 
 import java.util.concurrent.locks.StampedLock;
@@ -25,6 +26,7 @@ public class LockUtils {
      * @param <T>            return value type
      * @return result of the code execution
      */
+    @Nullable
     public static <T> T returnWithOptimisticReadOrRetry(StampedLock lock, Supplier<T> resultSupplier) {
         checkNotNull(lock, "lock");
         checkNotNull(resultSupplier, "resultSupplier");
@@ -61,6 +63,7 @@ public class LockUtils {
      * @param <T>            return value type
      * @return result of the code execution
      */
+    @Nullable
     public static <T> T returnWithExclusiveLock(StampedLock lock, Supplier<T> resultSupplier) {
         checkNotNull(lock, "lock");
         checkNotNull(resultSupplier, "resultSupplier");

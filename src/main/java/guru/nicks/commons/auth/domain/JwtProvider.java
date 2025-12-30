@@ -33,8 +33,8 @@ public enum JwtProvider {
     private static final Map<String, JwtProvider> BY_ISSUER = Arrays.stream(values())
             .collect(Collectors.toMap(JwtProvider::getIssClaim, it -> it,
                     (existingOrigin, replacementOrigin) -> {
-                        throw new IllegalStateException("Duplicate JWT issuer in "
-                                + existingOrigin + " and " + replacementOrigin);
+                        throw new IllegalStateException("Duplicate JWT issuer in '"
+                                + existingOrigin + "' and '" + replacementOrigin + "'");
                     }));
 
     /**

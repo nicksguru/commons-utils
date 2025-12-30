@@ -126,8 +126,9 @@ public class JwtUtilsSteps {
                                 .map(v -> v.replace("\"", "").strip())
                                 .toList();
 
-                        when(jwtClaimAccessor.getClaim(CustomJwtClaim.COGNITO_GROUPS.getJwtName()))
-                                .thenReturn(valueList);
+                        // JwtUtils calls getClaimAsString for this claim, not getClaim
+                        when(jwtClaimAccessor.getClaimAsString(CustomJwtClaim.COGNITO_GROUPS.getJwtName()))
+                                .thenReturn(String.join(",", valueList));
                     }
                 }
 

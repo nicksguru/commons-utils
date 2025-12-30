@@ -126,7 +126,7 @@ public class JwtUtils {
         // attempt to read authorities from JWT in this order
         List<Function<JwtClaimAccessor, Optional<?>>> guessers = List.of(
                 KeycloakUtils::tryParseRoles,
-                jwt1 -> Optional.ofNullable(jwt1.getClaim(CustomJwtClaim.COGNITO_GROUPS.getJwtName())),
+                jwt1 -> Optional.ofNullable(CustomJwtClaim.COGNITO_GROUPS.getClaimAsString(jwt1)),
                 // fallback for 'no roles found in JWT'
                 jwt1 -> Optional.empty());
 
@@ -166,7 +166,7 @@ public class JwtUtils {
     public static Locale retrieveUserLocale(JwtClaimAccessor jwt) {
         checkNotNull(jwt, _JwtUtilsRetrieveUserLocaleArgumentsMeta.JWT.name());
 
-        String claim = jwt.getClaimAsString(CustomJwtClaim.LOCALE.getJwtName());
+        String claim = CustomJwtClaim.LOCALE.getClaimAsString(jwt);
         if (StringUtils.isBlank(claim)) {
             return DEFAULT_USER_LOCALE;
         }
@@ -176,7 +176,7 @@ public class JwtUtils {
         return LOCALE_CACHE.get(claim, key -> {
             try {
                 Locale locale = LocaleUtils.toLocale(key);
-                return locale != null
+                return (locale != null)
                         ? locale
                         : DEFAULT_USER_LOCALE;
             } catch (RuntimeException e) {

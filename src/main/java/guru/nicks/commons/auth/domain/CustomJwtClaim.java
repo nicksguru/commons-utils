@@ -2,6 +2,7 @@ package guru.nicks.commons.auth.domain;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.core.ClaimAccessor;
 
 /**
  * Non-standard JWT claim names.
@@ -53,14 +54,48 @@ public enum CustomJwtClaim {
 
     /**
      * Open ID Connect <a href="https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims">standard
-     * claims</a>.
+     * claim</a>.
      */
     GIVEN_NAME("given_name"),
+
+    /**
+     * Open ID Connect <a href="https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims">standard
+     * claim</a>.
+     */
     FAMILY_NAME("family_name"),
+
+    /**
+     * Open ID Connect <a href="https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims">standard
+     * claim</a>.
+     */
     NAME("name"),
+
+    /**
+     * Open ID Connect <a href="https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims">standard
+     * claim</a>.
+     */
     PICTURE("picture"),
+
+    /**
+     * Open ID Connect <a href="https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims">standard
+     * claim</a>.
+     */
     LOCALE("locale");
 
+    /**
+     * Claim name in JWT.
+     */
     private final String jwtName;
+
+    /**
+     * Retrieves the claim ({@link #getJwtName()}) from JWT.
+     *
+     * @param jwt JWT
+     * @return claim as string ({@code null} if it doesn't exist or is equal to {@code null})
+     */
+    public String getClaimAsString(ClaimAccessor jwt) {
+        return jwt.getClaimAsString(jwtName);
+
+    }
 
 }

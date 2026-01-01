@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Positive;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.NonFinal;
-import lombok.extern.jackson.Jacksonized;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,7 +23,6 @@ import java.util.regex.Pattern;
 // immutability
 @Value
 @NonFinal // CGLIB creates a subclass to bind property values (nested classes don't need this)
-@Jacksonized
 @Builder(toBuilder = true)
 public class CacheProperties {
 
@@ -47,7 +45,6 @@ public class CacheProperties {
     Durations durations = new Durations();
 
     @Value
-    @Jacksonized
     @Builder(toBuilder = true)
     public static class Durations {
 
@@ -85,7 +82,6 @@ public class CacheProperties {
     }
 
     @Value
-    @Jacksonized
     @Builder(toBuilder = true)
     public static class InMemory {
 
@@ -108,7 +104,6 @@ public class CacheProperties {
     }
 
     @Value
-    @Jacksonized
     @Builder(toBuilder = true)
     public static class CacheDefinition {
 

@@ -44,7 +44,7 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNullNested;
 public class JwkUtils {
 
     /**
-     * Finds the smallest {@link JwkInfo#getExpirationDate()} - it can even be in the past.
+     * Finds the smallest {@link JwkInfo#expirationDate()} - it can even be in the past.
      *
      * @param jwkInfos JWKs
      * @return optional smallest expiration date
@@ -54,7 +54,7 @@ public class JwkUtils {
         checkNotNull(jwkInfos, _JwkUtilsFindSmallestExpirationDateArgumentsMeta.JWKINFOS.name());
 
         return jwkInfos.stream()
-                .map(JwkInfo::getExpirationDate)
+                .map(JwkInfo::expirationDate)
                 .filter(Objects::nonNull)
                 .min(Instant::compareTo);
     }
@@ -68,10 +68,8 @@ public class JwkUtils {
      */
     @ConstraintArguments
     public static List<RSAPublicKey> extractPublicKeys(JwkInfo jwkInfo) {
-        checkNotNullNested(jwkInfo, _JwkUtilsExtractPublicKeysArgumentsMeta.JWKINFO.name(),
-                JwkInfo::getKeys, "keys");
-
-        return TransformUtils.toList(jwkInfo.getKeys().toPublicJWKSet().getKeys(), JwkUtils::convertToRsaPublicKey);
+        checkNotNullNested(jwkInfo, _JwkUtilsExtractPublicKeysArgumentsMeta.JWKINFO.name(), JwkInfo::keys, "keys");
+        return TransformUtils.toList(jwkInfo.keys().toPublicJWKSet().getKeys(), JwkUtils::convertToRsaPublicKey);
     }
 
     /**
@@ -97,9 +95,9 @@ public class JwkUtils {
 
     /**
      * Fetches JWKS from the given URL. Honors {@code Cache-Control} header set, for example, by Google - assigns
-     * {@link JwkInfo#getExpirationDate()}.
+     * {@link JwkInfo#expirationDate()}.
      *
-     * @param authProviderId ID to assign to the JWKS ({@link JwkInfo#getAuthProviderId()})
+     * @param authProviderId ID to assign to the JWKS ({@link JwkInfo#authProviderId()})
      * @param url            URL to fetch JWKS from
      * @param restClient     REST client
      * @return JWKS
@@ -181,7 +179,7 @@ public class JwkUtils {
      *
      * @param response the HTTP response entity containing the JWK set JSON in the response body
      * @param url      the URL from which the JWK set was fetched, used for error reporting and logging
-     * @return a validated JWKSet containing at least one key
+     * @return a validated {@link JWKSet} containing at least one key
      * @throws JwtException if the response body is blank / parsing fails / the JWK set contains no keys
      */
     private static JWKSet parseAndValidateJwkSet(HttpEntity<String> response, String url) {
@@ -237,8 +235,8 @@ public class JwkUtils {
                     .build();
 
             String expirationInfo = String.format("at least one of them expires in %s (at %s)",
-                    TimeUtils.humanFormatDuration(Duration.between(now, updatedJwkInfo.getExpirationDate())),
-                    updatedJwkInfo.getExpirationDate());
+                    TimeUtils.humanFormatDuration(Duration.between(now, updatedJwkInfo.expirationDate())),
+                    updatedJwkInfo.expirationDate());
             logJwkSetFetched(updatedJwkInfo, authProviderId, url, expirationInfo);
 
             return updatedJwkInfo;
@@ -260,7 +258,7 @@ public class JwkUtils {
      */
     private static void logJwkSetFetched(JwkInfo jwkInfo, String authProviderId, String url, String expirationInfo) {
         log.info("Fetched {} JWT public keys for auth provider '{}' from '{}'; {}",
-                jwkInfo.getKeys().size(), authProviderId, url, expirationInfo);
+                jwkInfo.keys().size(), authProviderId, url, expirationInfo);
     }
 
 }

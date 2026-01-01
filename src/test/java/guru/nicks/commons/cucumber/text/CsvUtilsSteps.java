@@ -33,27 +33,27 @@ public class CsvUtilsSteps {
     @Then("parsed CSV should be {string}, {string}, {int}, {string}, {string}, {int}")
     public void parsedCsvShouldBe(String firstName1, String lastName1, Integer age1,
             String firstName2, String lastName2, Integer age2) {
-        assertThat(csvUtilsWorld.getParsed().getFirst().getFirstName())
+        assertThat(csvUtilsWorld.getParsed().getFirst().firstName())
                 .as("first record firstName")
                 .isEqualTo(firstName1);
 
-        assertThat(csvUtilsWorld.getParsed().getFirst().getLastName())
+        assertThat(csvUtilsWorld.getParsed().getFirst().lastName())
                 .as("first record lastName")
                 .isEqualTo(lastName1);
 
-        assertThat(csvUtilsWorld.getParsed().getFirst().getAge())
+        assertThat(csvUtilsWorld.getParsed().getFirst().age())
                 .as("first record age")
                 .isEqualTo(age1);
 
-        assertThat(csvUtilsWorld.getParsed().get(1).getFirstName())
+        assertThat(csvUtilsWorld.getParsed().get(1).firstName())
                 .as("second record firstName")
                 .isEqualTo(firstName2);
 
-        assertThat(csvUtilsWorld.getParsed().get(1).getLastName())
+        assertThat(csvUtilsWorld.getParsed().get(1).lastName())
                 .as("second record lastName")
                 .isEqualTo(lastName2);
 
-        assertThat(csvUtilsWorld.getParsed().get(1).getAge())
+        assertThat(csvUtilsWorld.getParsed().get(1).age())
                 .as("second record age")
                 .isEqualTo(age2);
     }

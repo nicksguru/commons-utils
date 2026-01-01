@@ -12,10 +12,7 @@ import lombok.Builder;
 import lombok.SneakyThrows;
 import lombok.Synchronized;
 import lombok.ToString;
-import lombok.Value;
-import lombok.experimental.NonFinal;
 import lombok.experimental.UtilityClass;
-import lombok.extern.jackson.Jacksonized;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -53,12 +50,12 @@ public class ResourceUtils {
     private static final Duration CACHE_TTL = Duration.of(1, ChronoUnit.DAYS);
 
     /**
-     * Total size of all entries' {@link CacheEntry#getContent()} the cache can hold before starting eviction.
+     * Total size of all entries' {@link CacheEntry#content()} the cache can hold before starting eviction.
      */
     private static final DataSize MAX_TOTAL_CACHE_SIZE = DataSize.ofMegabytes(20);
 
     /**
-     * Entries whose {@link CacheEntry#getContent()} size exceeds this value aren't stored in cache.
+     * Entries whose {@link CacheEntry#content()} size exceeds this value aren't stored in cache.
      */
     private static final DataSize MAX_ENTRY_SIZE = DataSize.ofMegabytes(1);
 
@@ -187,8 +184,8 @@ public class ResourceUtils {
             // store in cache only if content size doesn't exceed the maximum (Caffeine doesn't have this feature,
             // therefore LoadingCache can't be used)
             if ((cacheEntry != null)
-                    && (cacheEntry.getContent() != null)
-                    && (cacheEntry.getContent().length <= MAX_ENTRY_SIZE.toBytes())) {
+                    && (cacheEntry.content() != null)
+                    && (cacheEntry.content().length <= MAX_ENTRY_SIZE.toBytes())) {
                 RESOURCE_CACHE.put(key, cacheEntry);
             }
         }
@@ -344,27 +341,23 @@ public class ResourceUtils {
      *
      * @param key   cache key
      * @param value cache entry
-     * @return size of {@link CacheEntry#getContent()}
+     * @return size of {@link CacheEntry#content()}
      */
     private static int computeCacheEntryWeight(String key, CacheEntry value) {
-        return Optional.ofNullable(value.getContent())
+        return Optional.ofNullable(value.content())
                 .map(array -> array.length)
                 .orElse(0);
     }
 
-    @Value
-    @NonFinal
-    @Jacksonized
     @Builder(toBuilder = true)
-    public static class CacheEntry {
+    public record CacheEntry(
 
-        @ToString.Exclude
-        byte[] content;
+            @ToString.Exclude
+            byte[] content,
 
-        long contentLength;
-        MediaType contentType;
-        String checksum;
-
+            long contentLength,
+            MediaType contentType,
+            String checksum) {
     }
 
 }

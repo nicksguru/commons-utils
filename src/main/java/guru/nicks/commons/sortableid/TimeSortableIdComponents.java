@@ -4,7 +4,6 @@ import am.ik.yavi.meta.ConstraintArguments;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.NonFinal;
-import lombok.extern.jackson.Jacksonized;
 
 import java.time.Instant;
 
@@ -18,7 +17,6 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
  */
 @Value
 @NonFinal
-@Jacksonized
 @Builder(toBuilder = true)
 public class TimeSortableIdComponents {
 

@@ -3,7 +3,6 @@ package guru.nicks.commons.cloud.domain;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.NonFinal;
-import lombok.extern.jackson.Jacksonized;
 import org.springframework.http.MediaType;
 
 import java.time.Instant;
@@ -13,7 +12,6 @@ import java.time.Instant;
  */
 @Value
 @NonFinal
-@Jacksonized
 @Builder(toBuilder = true)
 public class CloudFile {
 

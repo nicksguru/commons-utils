@@ -1,13 +1,10 @@
 package guru.nicks.commons.auth.domain;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import lombok.experimental.FieldNameConstants;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -19,8 +16,6 @@ import java.util.Base64;
  */
 @Data
 @NoArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-@Jacksonized
 @SuperBuilder(toBuilder = true)
 @FieldNameConstants
 public class BasicAuthCredentials {
@@ -35,10 +30,9 @@ public class BasicAuthCredentials {
     public static final String BASIC_AUTH_PREFIX = BASIC_AUTH_TYPE + " ";
 
     @NotBlank
-    String username;
-
+    private String username;
     @NotBlank
-    String password;
+    private String password;
 
     /**
      * Checks if the {@link #getUsername() username} is not blank.

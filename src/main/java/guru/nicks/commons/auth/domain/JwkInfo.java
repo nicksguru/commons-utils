@@ -2,26 +2,32 @@ package guru.nicks.commons.auth.domain;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import lombok.Builder;
+import lombok.Value;
+import lombok.experimental.NonFinal;
 
+import java.io.Serializable;
 import java.time.Instant;
 
 /**
  * JWKS (JSON Web Key Set) - JWK objects, as per <a href="https://datatracker.ietf.org/doc/html/rfc7517">IETF</a>. The
- * objects may expire, as per {@link #expirationDate()}, and must be re-fetched thereafter.
+ * objects may expire, as per {@link #getExpirationDate()}, and must be re-fetched thereafter.
  */
+@Value
+@NonFinal
 @Builder(toBuilder = true)
-public record JwkInfo(
+public class JwkInfo implements Serializable {
 
-        /**
-         * Label for logging purposes.
-         */
-        String authProviderId,
+    /**
+     * Label for logging purposes.
+     */
+    String authProviderId;
 
-        JWKSet keys,
+    JWKSet keys;
 
-        /**
-         * Google, for example, returns this in {@code Cache-Control} response header. If not {@code null}, defines the
-         * moment when the signature expires and therefore stops accepting any tokens.
-         */
-        Instant expirationDate) {
+    /**
+     * Google, for example, returns this in {@code Cache-Control} response header. If not {@code null}, defines the
+     * moment when the signature expires and therefore stops accepting any tokens.
+     */
+    Instant expirationDate;
+
 }

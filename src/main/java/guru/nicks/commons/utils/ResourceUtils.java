@@ -11,7 +11,6 @@ import jakarta.annotation.Nullable;
 import lombok.Builder;
 import lombok.SneakyThrows;
 import lombok.Synchronized;
-import lombok.ToString;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
@@ -27,6 +26,7 @@ import org.springframework.util.unit.DataSize;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -352,12 +352,11 @@ public class ResourceUtils {
     @Builder(toBuilder = true)
     public record CacheEntry(
 
-            @ToString.Exclude
             byte[] content,
-
             long contentLength,
             MediaType contentType,
-            String checksum) {
+
+            String checksum) implements Serializable {
     }
 
 }

@@ -229,7 +229,7 @@ public class JwkUtilsSteps {
                 .as("JWK info")
                 .isNotNull();
 
-        assertThat(jwkInfo.expirationDate())
+        assertThat(jwkInfo.getExpirationDate())
                 .as("expiration date")
                 .isNotNull();
     }
@@ -240,7 +240,7 @@ public class JwkUtilsSteps {
                 .as("JWK info")
                 .isNotNull();
 
-        assertThat(jwkInfo.expirationDate())
+        assertThat(jwkInfo.getExpirationDate())
                 .as("expiration date")
                 .isNull();
     }
@@ -251,7 +251,7 @@ public class JwkUtilsSteps {
                 .as("JWK info")
                 .isNotNull();
 
-        assertThat(jwkInfo.authProviderId())
+        assertThat(jwkInfo.getAuthProviderId())
                 .as("auth provider ID")
                 .isEqualTo(expectedProviderId);
     }

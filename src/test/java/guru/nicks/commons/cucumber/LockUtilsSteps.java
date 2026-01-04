@@ -123,7 +123,7 @@ public class LockUtilsSteps {
         };
 
         textWorld.setLastException(catchThrowable(() ->
-                result.set(LockUtils.returnWithOptimisticReadOrRetry(trackedLock, () -> 42))));
+                result.set(LockUtils.withOptimisticReadOrRetry(trackedLock, () -> 42))));
     }
 
     @When("the optimistic read lock is used with write contention")
@@ -168,7 +168,7 @@ public class LockUtilsSteps {
         }
 
         textWorld.setLastException(catchThrowable(() ->
-                result.set(LockUtils.returnWithOptimisticReadOrRetry(trackedLock, () -> 42))));
+                result.set(LockUtils.withOptimisticReadOrRetry(trackedLock, () -> 42))));
 
         try {
             writerThread.join(1000);
@@ -180,7 +180,7 @@ public class LockUtilsSteps {
     @When("the exclusive write lock is used")
     public void theExclusiveWriteLockIsUsed() {
         textWorld.setLastException(catchThrowable(() ->
-                result.set(LockUtils.returnWithExclusiveLock(lock, () -> {
+                result.set(LockUtils.withExclusiveLock(lock, () -> {
                     writeLockAcquired.set(true);
                     return 42;
                 }))));
@@ -198,7 +198,7 @@ public class LockUtilsSteps {
 
                 executor.submit(() -> {
                     try {
-                        int value = LockUtils.returnWithOptimisticReadOrRetry(lock, () -> threadId);
+                        int value = LockUtils.withOptimisticReadOrRetry(lock, () -> threadId);
 
                         synchronized (threadResults) {
                             threadResults.add(value);
@@ -230,7 +230,7 @@ public class LockUtilsSteps {
 
                 executor.submit(() -> {
                     try {
-                        int value = LockUtils.returnWithExclusiveLock(lock, () -> {
+                        int value = LockUtils.withExclusiveLock(lock, () -> {
                             // simulate some work
                             try {
                                 Thread.sleep(10);
@@ -262,13 +262,13 @@ public class LockUtilsSteps {
     @When("the optimistic read lock is used")
     public void theOptimisticReadLockIsUsed() {
         textWorld.setLastException(catchThrowable(() ->
-                LockUtils.returnWithOptimisticReadOrRetry(lock, () -> 42)));
+                LockUtils.withOptimisticReadOrRetry(lock, () -> 42)));
     }
 
     @When("the optimistic read lock is used with null code")
     public void theOptimisticReadLockIsUsedWithNullCode() {
         textWorld.setLastException(catchThrowable(() ->
-                LockUtils.returnWithOptimisticReadOrRetry(lock, (Supplier<Integer>) null)));
+                LockUtils.withOptimisticReadOrRetry(lock, (Supplier<Integer>) null)));
     }
 
     @Then("the operation should complete successfully")

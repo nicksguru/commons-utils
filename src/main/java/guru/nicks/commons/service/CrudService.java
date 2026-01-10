@@ -78,7 +78,7 @@ public interface CrudService<T, ID extends Serializable> {
      * @param id entity ID
      * @return entity
      */
-    T getByIdOrThrow(ID id);
+    T getById(ID id);
 
     /**
      * Returns elements in the same order as they're specified in arguments.

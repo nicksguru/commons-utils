@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Serializes / deserializes / clones objects using OneNio. To switch to another implementation, replace this bean with
@@ -21,6 +22,9 @@ import java.util.Map;
  * WARNING: as per <a href="https://github.com/odnoklassniki/one-nio/wiki/Serialization-FAQ">this article</a>, only
  * classes implementing {@link Serializable} / {@link Externalizable} interfaces are serialized, others fail with
  * 'Invalid serializer' error. {@link Collection}, {@link Map}, {@link Enum}, and primitives are serialized seamlessly.
+ * <p>
+ * For example, {@link UUID} is not serializable (and therefore not {@code @Cacheable}) because it's an object which is
+ * not {@link Serializable}.
  */
 @Component
 public class OneNioSerializer implements NativeJavaSerializer {

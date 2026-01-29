@@ -1,25 +1,35 @@
 package guru.nicks.commons.utils;
 
+import am.ik.yavi.meta.ConstraintArguments;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.net.InetAddresses;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ValidationException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotBlank;
+import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 import static java.util.function.Predicate.not;
 
 @UtilityClass
@@ -44,7 +54,7 @@ public class HttpRequestUtils {
      * @see #resolveHttpStatus(int)
      */
     private static final Cache<Integer, Optional<HttpStatus>> HTTP_STATUS_CACHE = Caffeine.newBuilder()
-            .expireAfterAccess(7, TimeUnit.DAYS)
+            .expireAfterAccess(14, TimeUnit.DAYS)
             .build();
 
     /**
@@ -134,11 +144,54 @@ public class HttpRequestUtils {
      * @param statusCode HTTP status code
      * @return HTTP status if resolved
      */
-    public Optional<HttpStatus> resolveHttpStatus(int statusCode) {
+    public static Optional<HttpStatus> resolveHttpStatus(int statusCode) {
         // 'get' method may return null as per Caffeine specs, but never does in this particular case
-        //noinspection DataFlowIssue
         return HTTP_STATUS_CACHE.get(statusCode, key ->
                 Optional.ofNullable(HttpStatus.resolve(key)));
+    }
+
+    /**
+     * Creates a content disposition header value with the given type and filename.
+     *
+     * @param type             content disposition type: 'inline' or 'attachment' ({@code null} means 'inline')
+     * @param filenameSupplier creates the filename (it will be URL-encoded by this method, and newlines/slashes/control
+     *                         characters will be removed)
+     * @throws ValidationException invalid content disposition type (the cause if a {@link BindException} with error
+     *                             code 'Enumeration' and field name 'contentDisposition')
+     */
+    @ConstraintArguments
+    public static String createContentDispositionHeaderValue(@Nullable String type, Supplier<String> filenameSupplier) {
+        if (type == null) {
+            type = "inline";
+        }
+
+        // generate proper binding error for verbose error rendering (like for a DTO)
+        if (!"inline".equals(type) && !"attachment".equals(type)) {
+            var fieldError = new FieldError("request", "contentDisposition", type, true,
+                    new String[]{"Enumeration"}, null, "Invalid content disposition");
+
+            var result = new BeanPropertyBindingResult(type, "contentDisposition");
+            result.addError(fieldError);
+            throw new ValidationException(new BindException(result));
+        }
+
+        checkNotNull(filenameSupplier,
+                _HttpRequestUtilsCreateContentDispositionHeaderValueArgumentsMeta.FILENAMESUPPLIER.name());
+        String filename = filenameSupplier.get();
+        checkNotBlank(filename, "filename");
+
+        // sanitize CRLF to prevent header injection
+        filename = filename.replaceAll("[\\r\\n]", "");
+        // remove path separators to prevent path traversal
+        filename = filename.replaceAll("[/\\\\]", "");
+        // remove control characters
+        filename = filename.replaceAll("\\p{Cntrl}", "");
+
+        filename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                // URL encoding uses + for spaces, but headers need %20
+                .replace("+", "%20");
+
+        return type + "; filename=\"" + filename + "\"";
     }
 
 }

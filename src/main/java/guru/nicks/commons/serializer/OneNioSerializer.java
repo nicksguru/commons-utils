@@ -6,7 +6,6 @@ import one.nio.serial.PersistStream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.SerializationException;
 import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -26,7 +25,6 @@ import java.util.UUID;
  * For example, {@link UUID} is not serializable (and therefore not {@code @Cacheable}) because it's an object which is
  * not {@link Serializable}.
  */
-@Component
 public class OneNioSerializer implements NativeJavaSerializer {
 
     @Override

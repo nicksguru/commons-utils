@@ -8,7 +8,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.ApplicationContextEvent;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +21,6 @@ import java.util.function.Consumer;
  *      autowire it</li>
  * </ul>
  */
-@Component
 public class ApplicationContextHolderListener {
 
     private final List<Consumer<ApplicationContextEvent>> steps = List.of(
@@ -30,9 +28,9 @@ public class ApplicationContextHolderListener {
             this::storeApplicationContextInGlobalHolder);
 
     /**
-     * See class comment for details.
+     * See class comment for details. Subclasses can override this method to add their own steps, also they should add
+     * {@link EventListener} annotation (for {@link ContextRefreshedEvent}) to make this method an event listener.
      */
-    @EventListener(ContextRefreshedEvent.class)
     public void onContextRefreshedEvent(ContextRefreshedEvent event) {
         // this should never be null, but just in case
         if (event == null) {

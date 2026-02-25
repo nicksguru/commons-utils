@@ -14,7 +14,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Reacts to {@link ContextRefreshedEvent}:
+ * Reacts to {@link ContextRefreshedEvent} if there's a subclass set up as described in
+ * {@link #onContextRefreshedEvent(ContextRefreshedEvent)}:
  * <ul>
  *  <li>stores {@code spring.application.name} in {@link LogContext#APP_NAME} to enrich log messages</li>
  *  <li>stores {@link ApplicationContext} in {@link ApplicationContextHolder} for such use cases when it's impossible to

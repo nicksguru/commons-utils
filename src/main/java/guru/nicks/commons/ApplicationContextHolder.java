@@ -45,12 +45,15 @@ public class ApplicationContextHolder {
      */
     public static ApplicationContext getApplicationContext() {
         return findApplicationContext()
-                .orElseThrow(() -> new IllegalStateException("Missing application context in static holder"));
+                .orElseThrow(() -> new IllegalStateException("Missing application context in ["
+                        + ApplicationContextHolder.class.getName()
+                        + "]"));
     }
 
     public static void setApplicationContext(ApplicationContext applicationContext) {
         ApplicationContextHolder.applicationContext = applicationContext;
-        log.info("Stored ApplicationContext in global holder: {}", applicationContext.getDisplayName());
+        log.info("Stored application context in [{}]: {}",
+                ApplicationContextHolder.class.getName(), applicationContext.getDisplayName());
     }
 
     /**

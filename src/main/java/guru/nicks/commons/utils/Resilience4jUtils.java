@@ -1,8 +1,13 @@
 package guru.nicks.commons.utils;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
@@ -20,7 +25,7 @@ public class Resilience4jUtils {
 
     /**
      * Creates a retrier with default settings. By default, the delay between (3) retries is constant and equals 0.5
-     * seconds - see {@link RetryConfig}.
+     * seconds - see {@link RetryConfig}. If all retries fail, the original exception is re-thrown.
      *
      * @param name unique retrier name; if already used, no new retrier is created
      */
@@ -31,7 +36,8 @@ public class Resilience4jUtils {
     }
 
     /**
-     * Creates a circuit breaker with default settings. For defaults, see {@link CircuitBreakerConfig}.
+     * Creates a circuit breaker with default settings. For defaults, see {@link CircuitBreakerConfig}. If the circuit
+     * breaker is not open, {@link CallNotPermittedException} is thrown.
      *
      * @param name unique circuit breaker name; if already used, no new circuit breaker is created
      */
@@ -39,6 +45,18 @@ public class Resilience4jUtils {
         return CircuitBreakerRegistry
                 .ofDefaults()
                 .circuitBreaker(name);
+    }
+
+    /**
+     * Creates a rate limiter with default settings. For defaults, see {@link RateLimiterConfig}. If rate limit has been
+     * exceeded, {@link RequestNotPermitted} is thrown.
+     *
+     * @param name unique rate limiter name; if already used, no new rate limiter is created
+     */
+    public RateLimiter createDefaultRateLimiter(String name) {
+        return RateLimiterRegistry
+                .ofDefaults()
+                .rateLimiter(name);
     }
 
 }

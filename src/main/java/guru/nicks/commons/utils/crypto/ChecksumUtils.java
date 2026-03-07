@@ -33,8 +33,13 @@ public class ChecksumUtils {
     private static final Function<byte[], String> BINARY_ENCODER = Base64.getEncoder()::encodeToString;
 
     /**
-     * Computes checksum by first serializing the given object and then feeding it to {@link HashUtils#SHA_256}. For
-     * serialization details, see {@link JsonUtils#sortObjectKeys(Object)}.
+     * Computes checksum by first serializing the given object to JSON (with keys sorted for consistency!) and then
+     * feeding it to SHA-256. For serialization details, see {@link JsonUtils#sortObjectKeys(Object)}.
+     * <p>
+     * Although BLAKE3 is claimed to be 3x faster than SHA-256, it's not FIPS-certified, and its performance is actually
+     * worse than SHA-256. In Java, SHA-256 is well optimized and takes advantage of SIMD instructions.
+     * <p>
+     * As to {@code Canonical CBOR} (RFC 8949, with keys sorted), the benchmarks don't show any performance gain.
      * <p>
      * WARNING: to store a checksum in DB, column text-sensitivity must be ensured because Base64 is case-sensitive:
      * <ul>
@@ -47,36 +52,11 @@ public class ChecksumUtils {
      *            in some use cases)
      * @return Base64-encoded checksum
      */
-    public static String computeJsonChecksumSecure(@Nullable Object obj) {
+    public static String computeJsonChecksum(@Nullable Object obj) {
         String serialized = (obj == null)
                 ? ""
                 : JsonUtils.sortObjectKeys(obj);
         byte[] checksum = HashUtils.SHA_256.compute(
-                serialized.getBytes(StandardCharsets.UTF_8));
-        return BINARY_ENCODER.apply(checksum);
-    }
-
-    /**
-     * Computes checksum by first serializing the given object and then feeding it to {@link HashUtils#BLAKE3} which is
-     * crypto-grade and 3x faster than SHA-256, but not FIPS-certified. For serialization details, see
-     * {@link JsonUtils#sortObjectKeys(Object)}.
-     * <p>
-     * WARNING: to store a checksum in DB, column text-sensitivity must be ensured because Base64 is case-sensitive:
-     * <ul>
-     *  <li>for MySQL: {@code checksum VARCHAR(255) COLLATE utf8mb4_bin}</li>
-     *  <li>PostgreSQL: {@code checksum VARCHAR(255) COLLATE "C"}</li>
-     * </ul>
-     *
-     * @param obj the object (or a boxed primitive) to compute checksum for ({@code null} is treated as an empty string,
-     *            for usability purposes and to avoid returning nulls which would otherwise be wrapped in double quotes
-     *            in some use cases)
-     * @return Base64-encoded checksum
-     */
-    public static String computeJsonChecksumFast(@Nullable Object obj) {
-        String serialized = (obj == null)
-                ? ""
-                : JsonUtils.sortObjectKeys(obj);
-        byte[] checksum = HashUtils.BLAKE3.compute(
                 serialized.getBytes(StandardCharsets.UTF_8));
         return BINARY_ENCODER.apply(checksum);
     }

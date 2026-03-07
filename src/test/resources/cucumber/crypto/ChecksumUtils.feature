@@ -3,10 +3,10 @@ Feature: ChecksumUtils
 
   Scenario Outline: Compute checksum for scalars (and treating nulls as empty strings)
     Given input is "<Input>"
-    When checksum is computed for scalar input
+    When JSON checksum is computed for scalar input
     Then output should be "<Checksum>"
     Examples:
-      | Input           | Checksum                                     | Comments                               |
+      | Input           | Checksum                                     | Comment                                |
       | null            | 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU= | 'null' means null in this test         |
       |                 | 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU= | empty input string                     |
       | test            | n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg= |                                        |
@@ -15,7 +15,7 @@ Feature: ChecksumUtils
 
   Scenario Outline: Compute checksum for objects
     Given test user has name "<Name>" and email "<Email>"
-    When checksum is computed for test user
+    When JSON checksum is computed for test user
     Then output should be "<Checksum>"
     And sorted JSON should be "<Sorted JSON>"
     Examples:

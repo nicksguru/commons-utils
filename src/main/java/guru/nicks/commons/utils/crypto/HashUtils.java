@@ -3,7 +3,6 @@ package guru.nicks.commons.utils.crypto;
 import com.google.common.primitives.Longs;
 import net.openhft.hashing.LongHashFunction;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.digest.Blake3;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.validator.routines.checkdigit.CheckDigitException;
@@ -47,25 +46,6 @@ public enum HashUtils {
             }
 
             return ArrayUtils.subarray(hash, 0, hashLengthBytes);
-        }
-    },
-
-    /**
-     * BLAKE3 is 3 or more times faster than SHA-256, has the same output length, and technically could replace it, but
-     * it isn't FIPS-certified. It therefore suits use cases where speed is more important than official certification.
-     */
-    BLAKE3 {
-        /**
-         * @return 32
-         */
-        @Override
-        public int getMaxHashLengthBytes() {
-            return 256 / Byte.SIZE;
-        }
-
-        @Override
-        protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
-            return Blake3.hash(source);
         }
     },
 

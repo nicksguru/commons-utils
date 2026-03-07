@@ -165,7 +165,7 @@ public class ChecksumCacheKeyGeneratorSteps {
 
         // verify each checksum
         for (int i = 0; i < parameters.size(); i++) {
-            String expectedChecksum = ChecksumUtils.computeJsonChecksumSecure(parameters.get(i));
+            String expectedChecksum = ChecksumUtils.computeJsonChecksum(parameters.get(i));
             assertThat(checksums[i])
                     .as("checksums[%d]", i)
                     .isEqualTo(expectedChecksum);
@@ -183,7 +183,7 @@ public class ChecksumCacheKeyGeneratorSteps {
 
         // generate expected checksums
         List<String> expectedChecksums = parameters.stream()
-                .map(ChecksumUtils::computeJsonChecksumSecure)
+                .map(ChecksumUtils::computeJsonChecksum)
                 .toList();
 
         // join them with the delimiter
@@ -203,7 +203,7 @@ public class ChecksumCacheKeyGeneratorSteps {
                 .isInstanceOf(String.class);
 
         String key = (String) generatedKey;
-        String expectedChecksum = ChecksumUtils.computeJsonChecksumSecure(complexObject);
+        String expectedChecksum = ChecksumUtils.computeJsonChecksum(complexObject);
 
         assertThat(key)
                 .as("key")

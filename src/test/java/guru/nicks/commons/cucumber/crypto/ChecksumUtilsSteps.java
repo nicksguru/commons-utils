@@ -21,16 +21,18 @@ public class ChecksumUtilsSteps {
 
     private TestUser testUser;
     private String sortedJson;
+    private String firstChecksum;
+    private String secondChecksum;
 
-    @When("checksum is computed for scalar input")
-    public void checksumIsComputedForScalarInput() {
+    @When("JSON checksum is computed for scalar input")
+    public void jsonChecksumIsComputedForScalarInput() {
         String input = textWorld.getInput();
 
         if ("null".equals(input)) {
             input = null;
         }
 
-        String checksum = ChecksumUtils.computeJsonChecksumSecure(input);
+        String checksum = ChecksumUtils.computeJsonChecksum(input);
         textWorld.setOutput(checksum);
     }
 
@@ -42,10 +44,10 @@ public class ChecksumUtilsSteps {
                 .build();
     }
 
-    @When("checksum is computed for test user")
-    public void checksumIsComputedForTestUser() {
+    @When("JSON checksum is computed for test user")
+    public void jsonChecksumIsComputedForTestUser() {
         sortedJson = JsonUtils.sortObjectKeys(testUser);
-        String checksum = ChecksumUtils.computeJsonChecksumSecure(testUser);
+        String checksum = ChecksumUtils.computeJsonChecksum(testUser);
         textWorld.setOutput(checksum);
     }
 

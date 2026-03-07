@@ -57,12 +57,13 @@ public class JsonUtils {
      * avoid checksum differences caused by random key order (for this to work, objects must first be serialized to maps
      * and then to JSON)
      * <p>
-     * Also, dates are written as timestamps, for consistency. {@link ObjectMapper} bean is not used because it may or
-     * may not be configured to sort keys.
+     * Dates are written not as {@link SerializationFeature#WRITE_DATES_AS_TIMESTAMPS timestamps}. {@link ObjectMapper}
+     * bean is not used because it may or may not be configured to sort keys.
      */
     private static final ObjectMapper KEY_SORTING_OBJECT_MAPPER = new ObjectMapper()
             // sort keys in JSON to render unsorted maps, such as HashMap, in consistent order
             .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
             // process Java 8 dates
             .registerModule(new JavaTimeModule());
 
@@ -106,7 +107,7 @@ public class JsonUtils {
     }
 
     /**
-     * Processes the argument as follows:
+     * Serializes the argument as follows:
      * <ul>
      *  <li>{@code null} is treated as-is</li>
      *  <li>for a non-null {@link ReflectionUtils#isScalar(Object) scalar}, {@link Object#toString()} is called</li>

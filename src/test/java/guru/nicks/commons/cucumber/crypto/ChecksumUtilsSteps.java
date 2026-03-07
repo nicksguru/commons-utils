@@ -30,7 +30,7 @@ public class ChecksumUtilsSteps {
             input = null;
         }
 
-        String checksum = ChecksumUtils.computeJsonChecksumBase64(input);
+        String checksum = ChecksumUtils.computeJsonChecksumSecure(input);
         textWorld.setOutput(checksum);
     }
 
@@ -45,7 +45,7 @@ public class ChecksumUtilsSteps {
     @When("checksum is computed for test user")
     public void checksumIsComputedForTestUser() {
         sortedJson = JsonUtils.sortObjectKeys(testUser);
-        String checksum = ChecksumUtils.computeJsonChecksumBase64(testUser);
+        String checksum = ChecksumUtils.computeJsonChecksumSecure(testUser);
         textWorld.setOutput(checksum);
     }
 

@@ -2,8 +2,8 @@ package guru.nicks.commons.sortableid;
 
 import guru.nicks.commons.encoder.Checksummer;
 import guru.nicks.commons.encoder.Encoder;
-import guru.nicks.commons.utils.crypto.HashUtils;
 import guru.nicks.commons.utils.crypto.ChecksumUtils;
+import guru.nicks.commons.utils.crypto.HashUtils;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class TimeSortableIdChecksummer implements Checksummer {
      */
     @Override
     public String compute(String value) {
-        char checksum = ChecksumUtils.computeExtendedCheckDigit(value, HashUtils.VERHOEFF::compute, "0123456789");
+        char checksum = ChecksumUtils.computeExtendedCheckDigit(value, HashUtils.VERHOEFF_DIGIT::compute, "0123456789");
         return String.valueOf(checksum);
     }
 

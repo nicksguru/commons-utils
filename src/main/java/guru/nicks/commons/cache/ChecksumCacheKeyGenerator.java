@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 /**
  * Joins all calling method's arguments with {@link CacheConstants#TOPIC_DELIMITER} as
- * {@link ChecksumUtils#computeJsonChecksumBase64(Object)}, replacing nulls with empty strings ({@code :: ::} and
+ * {@link ChecksumUtils#computeJsonChecksumSecure(Object)}, replacing nulls with empty strings ({@code :: ::} and
  * {@code ::::} keys are valid and different - it's important to not lose any arguments). To be used as
  * {@link Cacheable#keyGenerator()}.
  */
@@ -23,7 +23,7 @@ public class ChecksumCacheKeyGenerator implements KeyGenerator {
     @Override
     public Object generate(Object target, Method method, Object... params) {
         return Arrays.stream(params)
-                .map(ChecksumUtils::computeJsonChecksumBase64)
+                .map(ChecksumUtils::computeJsonChecksumSecure)
                 .collect(Collectors.joining(CacheConstants.TOPIC_DELIMITER));
     }
 

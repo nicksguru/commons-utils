@@ -11,6 +11,7 @@ import io.cucumber.java.en.When;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import org.apache.commons.codec.binary.Hex;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -124,18 +125,17 @@ public class HashUtilsSteps {
                     // plain strings because these algorithms generate decimal digits
                     if ((testData.getAlgorithm() == HashUtils.LUHN_DIGIT)
                             || (testData.getAlgorithm() == HashUtils.ISIN_DIGIT)
-                            || (testData.getAlgorithm() == HashUtils.VERHOEFF)) {
+                            || (testData.getAlgorithm() == HashUtils.VERHOEFF_DIGIT)) {
                         String resultString = new String(hashResult, StandardCharsets.UTF_8);
                         assertThat(resultString)
-                                .as("hashResult as string")
+                                .as("hashResult as plain string for " + testData.getAlgorithm())
                                 .isEqualTo(testData.getExpectedOutput());
                     }
                     // hex strings because other algorithms generate binary output
                     else {
-                        byte[] expected = hexStringToByteArray(testData.getExpectedOutput());
-                        assertThat(hashResult)
-                                .as("hashResult")
-                                .isEqualTo(expected);
+                        assertThat(Hex.encodeHexString(hashResult, false))
+                                .as("hashResult as hex string for " + testData.getAlgorithm())
+                                .isEqualTo(testData.getExpectedOutput());
                     }
                 }
             });

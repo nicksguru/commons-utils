@@ -9,10 +9,11 @@ import lombok.experimental.UtilityClass;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SequencedSet;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -67,11 +68,7 @@ public class TransformUtils {
     }
 
     /**
-     * Convenience method to {@link Iterable} to list by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper).toList()} idiom.
-     * <p>
-     * For example, we may need class names from a list of classes, in which case {@code mapper} is
-     * {@code Class::getName}.
+     * Maps {@link Iterable} to list by extracting/transforming its elements.
      *
      * @param from   source, can be {@code null}
      * @param mapper mapping function (usage of {@link Function#andThen(Function)} is encouraged, but method references
@@ -94,8 +91,7 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to list by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper1).map(mapper2).toList()} idiom.
+     * Maps {@link Iterable} to list by extracting/transforming its elements.
      * <p>
      * For example, we may need class names (in uppercase) from a list of classes, in which case {@code mapper1} is
      * {@code Class::getName}, {@code mapper2} is {@code String::toUpperCase}. They can't be chained with
@@ -118,8 +114,7 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to list by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper1).map(mapper2).map(mapper3).toList()} idiom.
+     * Maps {@link Iterable} to list by extracting/transforming its elements.
      *
      * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
@@ -141,36 +136,32 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to set by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper).collect(Collectors.toSet())} idiom.
-     * <p>
-     * <p>
-     * For example, we may need class names from a list of classes, in which case {@code mapper} is
-     * {@link Class#getName}.
+     * Maps {@link Iterable} to set by extracting/transforming its elements. The elements are stored in the same order
+     * as they're encountered in the source {@link Iterable}.
      *
      * @param from   source, can be {@code null}
-     * @param mapper mapping function (usage of {@link Function#andThen(Function)} is encouraged, but method references
+     * @param mapper mapping function (use of {@link Function#andThen(Function)} is encouraged, but method references
      *               can't be chained like that directly)
      * @param <T>    source list type
      * @param <R>    mapped value type
      * @return mutable set - crucial for Hibernate if this set is assigned to another entity; if it's immutable,
      *         Hibernate can't save it because it tries to clear it first
      */
-    public static <T, R> Set<R> toSet(@Nullable Iterable<T> from, Function<? super T, R> mapper) {
+    public static <T, R> SequencedSet<R> toSet(@Nullable Iterable<T> from, Function<? super T, R> mapper) {
         if (from == null) {
-            return new HashSet<>();
+            return new LinkedHashSet<>();
         }
 
         checkNotNull(mapper, "mapper");
 
         return createStream(from)
                 .map(mapper)
-                .collect(Collectors.toCollection(HashSet::new));
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**
-     * Maps {@link Iterable} to set by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper1).map(mapper2).collect(Collectors.toSet())} idiom.
+     * Maps {@link Iterable} to set by extracting/transforming its elements. The elements are stored in the same order
+     * as they're encountered in the source {@link Iterable}.
      * <p>
      * For example, we may need class names (in uppercase) from a list of classes, in which case {@code mapper1} is
      * {@code Class::getName}, {@code mapper2} is {@code String::toUpperCase}. They can't be chained with
@@ -193,8 +184,8 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to set by extracting/transforming its elements. Replaces the common
-     * {@code something.stream().map(mapper1).map(mapper2).map(mapper3).collect(Collectors.toSet())} idiom.
+     * Maps {@link Iterable} to set by extracting/transforming its elements. The elements are stored in the same order
+     * as they're encountered in the source {@link Iterable}.
      *
      * @param from    source, can be {@code null}
      * @param mapper1 mapping function #1
@@ -216,8 +207,7 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to map. Replaces the common
-     * {@code something.stream().collect(Collectors.toMap(Something::getId, Function.identity()))} idiom.
+     * Maps {@link Iterable} to map.
      *
      * @param from         source, can be {@code null}, in which case {@code null} is returned
      * @param keyExtractor extracts map key from {@code V}
@@ -231,8 +221,7 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to map. Replaces the common
-     * {@code something.stream().collect(Collectors.toMap(Something::getId, Something::getName))} idiom.
+     * Maps {@link Iterable} to map.
      *
      * @param from           source, can be {@code null}, in which case {@code null} is returned
      * @param keyExtractor   extracts map key from {@code T}

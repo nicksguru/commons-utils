@@ -3,6 +3,7 @@ package guru.nicks.commons.utils.crypto;
 import com.google.common.primitives.Longs;
 import net.openhft.hashing.LongHashFunction;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.Blake3;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.validator.routines.checkdigit.CheckDigitException;
@@ -50,6 +51,25 @@ public enum HashUtils {
     },
 
     /**
+     * BLAKE3 is 3 or more times faster than SHA-256, has the same output length, and technically could replace it, but
+     * it isn't FIPS-certified. It therefore suits use cases where speed is more important than official certification.
+     */
+    BLAKE3 {
+        /**
+         * @return 32
+         */
+        @Override
+        public int getMaxHashLengthBytes() {
+            return 256 / Byte.SIZE;
+        }
+
+        @Override
+        protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
+            return Blake3.hash(source);
+        }
+    },
+
+    /**
      * SHA-256 is a crypto-grade algorithm with a fixed hash length.
      */
     SHA_256 {
@@ -68,18 +88,18 @@ public enum HashUtils {
     },
 
     /**
-     * SHA3 is a crypto-grade algorithm with a variable hash length.
+     * SHA3 is a crypto-grade algorithm with a variable hash length. It's 2-3 times slower than SHA-256.
      * <p>
-     * SHA3-512 is always used regardless of the desired hash length, as SHA3-256 yields totally different results (it's
-     * not a prefix to SHA3-512). It's desirable to use and truncate the same hash, for consistency.
+     * SHA3-256 is always used regardless of the desired hash length, as SHA3-512 is slower and yields totally different
+     * results (it's not a prefix to SHA3-256). It's desirable to use and truncate the same hash, for consistency.
      */
-    SHA3_512 {
+    SHA3_256 {
         /**
-         * @return 64
+         * @return 32
          */
         @Override
         public int getMaxHashLengthBytes() {
-            return 512 / Byte.SIZE;
+            return 256 / Byte.SIZE;
         }
 
         @Override
@@ -91,8 +111,8 @@ public enum HashUtils {
         protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
             byte[] target = new byte[hashLengthBytes];
 
-            // always use SHA3-512 for consistency, as SHA-256 results differ from SHA3-512 significantly
-            var digest = new ShortenedDigest(new SHA3Digest(512), target.length);
+            // always use SHA3-256 for consistency, as SHA-512 results differ from SHA3-256 significantly
+            var digest = new ShortenedDigest(new SHA3Digest(256), target.length);
             digest.update(source, 0, source.length);
             digest.doFinal(target, 0);
 
@@ -181,7 +201,7 @@ public enum HashUtils {
      * <p>
      * Throws {@link IllegalArgumentException} if the input is blank or non-decimal.
      */
-    VERHOEFF {
+    VERHOEFF_DIGIT {
         /**
          * @return 1
          */

@@ -212,7 +212,7 @@ public class ResourceUtils {
      * Returns a tag built out of {@link GitProperties#getCommitId()}. Or, if there's no such Spring bean or the commit
      * ID is empty, out of {@link BuildProperties#getTime()}. Or, if there's no such Spring bean or the build time is
      * {@code null}, from current time. In all cases, the value is generated once (wrapped in
-     * {@link ChecksumUtils#computeJsonChecksumBase64(Object)}), and subsequent calls return the cached copy.
+     * {@link ChecksumUtils#computeJsonChecksumSecure(Object)}), and subsequent calls return the cached copy.
      * <p>
      * If {@link ApplicationContextHolder} is unable to look up Spring beans, the default approach (current time) is
      * used.
@@ -260,7 +260,7 @@ public class ResourceUtils {
                 newTag = Instant.now().toString();
             }
 
-            cachedBuildTag = ChecksumUtils.computeJsonChecksumBase64(newTag);
+            cachedBuildTag = ChecksumUtils.computeJsonChecksumSecure(newTag);
             return cachedBuildTag;
         }
     }
@@ -325,7 +325,7 @@ public class ResourceUtils {
     @SneakyThrows
     private static CacheEntry mapToCacheEntry(Resource resource) {
         byte[] content = IOUtils.toByteArray(resource.getInputStream());
-        String checksum = ChecksumUtils.computeJsonChecksumBase64(content);
+        String checksum = ChecksumUtils.computeJsonChecksumSecure(content);
         MediaType contentType = guessContentType(resource.getFilename());
 
         return CacheEntry.builder()

@@ -7,7 +7,6 @@ import am.ik.yavi.meta.ConstraintArguments;
 import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -34,8 +33,8 @@ public class ChecksumUtils {
     private static final Function<byte[], String> BINARY_ENCODER = Base64.getEncoder()::encodeToString;
 
     /**
-     * Computes checksum by first serializing the given object and then feeding it to SHA-256. For caveats and
-     * exceptions thrown, see {@link JsonUtils#sortObjectKeys(Object) serializer}.
+     * Computes checksum by first serializing the given object and then feeding it to {@link HashUtils#SHA_256}. For
+     * serialization details, see {@link JsonUtils#sortObjectKeys(Object)}.
      * <p>
      * WARNING: to store a checksum in DB, column text-sensitivity must be ensured because Base64 is case-sensitive:
      * <ul>
@@ -48,11 +47,37 @@ public class ChecksumUtils {
      *            in some use cases)
      * @return Base64-encoded checksum
      */
-    public static String computeJsonChecksumBase64(@Nullable Object obj) {
+    public static String computeJsonChecksumSecure(@Nullable Object obj) {
         String serialized = (obj == null)
                 ? ""
                 : JsonUtils.sortObjectKeys(obj);
-        byte[] checksum = DigestUtils.sha256(serialized);
+        byte[] checksum = HashUtils.SHA_256.compute(
+                serialized.getBytes(StandardCharsets.UTF_8));
+        return BINARY_ENCODER.apply(checksum);
+    }
+
+    /**
+     * Computes checksum by first serializing the given object and then feeding it to {@link HashUtils#BLAKE3} which is
+     * crypto-grade and 3x faster than SHA-256, but not FIPS-certified. For serialization details, see
+     * {@link JsonUtils#sortObjectKeys(Object)}.
+     * <p>
+     * WARNING: to store a checksum in DB, column text-sensitivity must be ensured because Base64 is case-sensitive:
+     * <ul>
+     *  <li>for MySQL: {@code checksum VARCHAR(255) COLLATE utf8mb4_bin}</li>
+     *  <li>PostgreSQL: {@code checksum VARCHAR(255) COLLATE "C"}</li>
+     * </ul>
+     *
+     * @param obj the object (or a boxed primitive) to compute checksum for ({@code null} is treated as an empty string,
+     *            for usability purposes and to avoid returning nulls which would otherwise be wrapped in double quotes
+     *            in some use cases)
+     * @return Base64-encoded checksum
+     */
+    public static String computeJsonChecksumFast(@Nullable Object obj) {
+        String serialized = (obj == null)
+                ? ""
+                : JsonUtils.sortObjectKeys(obj);
+        byte[] checksum = HashUtils.BLAKE3.compute(
+                serialized.getBytes(StandardCharsets.UTF_8));
         return BINARY_ENCODER.apply(checksum);
     }
 
@@ -73,8 +98,8 @@ public class ChecksumUtils {
      * @param payload   string to compute checksum for
      * @param algorithm returns byte representation of a {@link String} holding any integer (negative values will be
      *                  inverted, the number length is unlimited), for example {@link HashUtils#LUHN_DIGIT} (doesn't
-     *                  permit all-zero input) or {@link HashUtils#VERHOEFF} which, unlike modulo-based algorithms,
-     *                  accepts all-zero input, but permits decimal digits only
+     *                  permit all-zero input) or {@link HashUtils#VERHOEFF_DIGIT} which, unlike modulo-based
+     *                  algorithms, accepts all-zero input, but permits decimal digits only
      * @param alphabet  alphabet to map the integer checksum on
      * @return a character belonging to {@code alphabet}
      * @throws IllegalArgumentException {@code payload} is {@code null} or ''; or {@code algorithm} is {@code null}; or

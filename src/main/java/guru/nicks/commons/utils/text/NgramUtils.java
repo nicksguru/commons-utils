@@ -4,15 +4,20 @@ import guru.nicks.commons.utils.FutureUtils;
 import guru.nicks.commons.validation.dsl.ValiDsl;
 
 import am.ik.yavi.meta.ConstraintArguments;
-import com.github.demidko.aot.WordformMeaning;
+import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.SequencedSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -23,10 +28,14 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.check;
  * with {@link #createNgrams(String, Mode, NgramUtilsConfig)}). The more ngrams match against each other, the higher is
  * the search score.
  * <p>
- * Russian words are augmented with their singular 'lemmas' (morphologically analysed forms, not just stems), for
+ * Russian words can be augmented with their singular 'lemmas' (morphologically analyzed forms, not just stems), for
  * example: 'люди' ('humans') -&gt; 'человек' ('a human'). Why not just replace each word with its stem? Because
  * non-intuitive things may happen: a stem for 'Google' is 'googl' for some reason, therefore searching for 'gle'
  * wouldn't find 'Google'. Also, singulars may differ from plurals drastically - see example above.
+ * <p>
+ * <b>Optional dependency:</b> Morphological analysis requires the optional {@code com.github.demidko:aot} JAR
+ * on the classpath. If not available, this feature is silently disabled and ngrams are generated without morphological
+ * analysis. Include the dependency only when Russian word analysis is needed.
  */
 @UtilityClass
 public class NgramUtils {
@@ -93,7 +102,7 @@ public class NgramUtils {
 
     /**
      * Creates ngrams for each unique word. Russian words are augmented with their singular 'lemmas' (morphologically
-     * analysed forms, not just stems), for example: 'люди' ('humans') -&gt; 'человек' ('a human').
+     * analyzed forms, not just stems), for example: 'люди' ('humans') -&gt; 'человек' ('a human').
      * <p>
      * WARNING: original words are part of the result only if the word length is within the ngram length limits and
      * {@code startEachWordOffset} is 0.
@@ -199,25 +208,43 @@ public class NgramUtils {
     /**
      * Performs morphology analysis for Russian and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
      * arguments and return value, see {@link #generatePlainNgrams(String, int, int, int, int)}.
+     * <p>
+     * This method only works if {@code com.github.demidko.aot.WordformMeaning} is available on the classpath. If the
+     * class is not available, returns an empty collection.
      *
-     * @return ngrams (modifiable collection)
+     * @return ngrams (modifiable collection), empty if morphological analysis is not available (no class on the
+     *         classpath)
      */
     private static SequencedSet<String> generateMorphNgrams(String word,
             int startEachWordOffset, int endEachWordOffset,
             int minNgramLength, int maxNgramLength) {
         var ngrams = new LinkedHashSet<String>();
 
-        // returns empty list for unknown words, for example for all non-Russian ones
-        for (WordformMeaning meaning : WordformMeaning.lookupForMeanings(word)) {
-            String lemma = meaning.getLemma().toString();
+        // check if the optional AOT dependency is available on the classpath
+        MorphMethods morphMethods = MorphMethods.getMethodsOrNull();
+        if (morphMethods == null) {
+            return ngrams;
+        }
 
-            // lemma might be the word itself or a prefix of the original word (i.e. part of prefix ngrams)
-            if (!Strings.CS.startsWith(word, lemma)) {
-                Set<String> plainNgrams = generatePlainNgrams(lemma,
-                        startEachWordOffset, endEachWordOffset,
-                        minNgramLength, maxNgramLength);
-                ngrams.addAll(plainNgrams);
+        // use MethodHandle for faster invocation than reflection
+        try {
+            List<?> meanings = (List<?>) morphMethods.lookupForMeanings().invokeExact(word);
+
+            // returns empty list for unknown words, for example for all non-Russian ones
+            for (Object meaning : meanings) {
+                Object lemma = morphMethods.getLemma().invoke(meaning);
+                String lemmaString = lemma.toString();
+
+                // lemma might be the word itself or a prefix of the original word (i.e. part of prefix ngrams)
+                if (!Strings.CS.startsWith(word, lemmaString)) {
+                    Set<String> plainNgrams = generatePlainNgrams(lemmaString,
+                            startEachWordOffset, endEachWordOffset,
+                            minNgramLength, maxNgramLength);
+                    ngrams.addAll(plainNgrams);
+                }
             }
+        } catch (Throwable t) {
+            throw new RuntimeException("Morphological analysis failed: " + t.getMessage(), t);
         }
 
         return ngrams;
@@ -256,6 +283,99 @@ public class NgramUtils {
          * Create infix (i.e. those starting with the 2nd character) ngrams only.
          */
         INFIX_ONLY
+
+    }
+
+    /**
+     * Holder for cached method handles used in morphological analysis.
+     *
+     * @param lookupForMeanings method handle for {@code WordformMeaning.lookupForMeanings(String)}
+     * @param getLemma          method handle for {@code WordformMeaning.getLemma()}
+     */
+    private record MorphMethods(
+
+            MethodHandle lookupForMeanings,
+            MethodHandle getLemma) {
+
+        /**
+         * Cached {@code WordformMeaning} class and method handles, or {@code null} if not available. Uses
+         * {@link AtomicReference} for thread-safe lazy initialization.
+         */
+        private static final AtomicReference<MorphMethods> INSTANCE = new AtomicReference<>();
+
+        /**
+         * Sentinel value to indicate that initialization failed.
+         */
+        private static final MorphMethods FAILED = new MorphMethods(null, null);
+
+        /**
+         * Checks if {@code com.github.demidko.aot.WordformMeaning} is available on the classpath and caches the result
+         * along with method handles for performance. Uses {@link AtomicReference} for thread-safe lazy initialization.
+         *
+         * @return the handles if available, {@code null} otherwise
+         */
+        @Nullable
+        static MorphMethods getMethodsOrNull() {
+            // fast path - already initialized or failed
+            MorphMethods morphMethods = INSTANCE.get();
+            if ((morphMethods != null) || initializationFailed()) {
+                return morphMethods;
+            }
+
+            // attempt initialization
+            morphMethods = tryInitializeMethods();
+
+            if (morphMethods != null) {
+                INSTANCE.compareAndSet(null, morphMethods);
+                // if another thread won the race, use its value
+                return INSTANCE.get();
+            }
+
+            // initialization failed, mark as such
+            markInitializationFailed();
+            return null;
+        }
+
+        /**
+         * Attempts to initialize morphology handles by loading the class and creating method handles.
+         *
+         * @return the handles if successful, {@code null} otherwise
+         */
+        @Nullable
+        private static MorphMethods tryInitializeMethods() {
+            try {
+                Class<?> wordformMeaningClass = Class.forName("com.github.demidko.aot.WordformMeaning");
+                var lookup = MethodHandles.lookup();
+
+                // create method handle for static method: 'List WordformMeaning.lookupForMeanings(String)'
+                var lookupForMeanings = lookup.findStatic(wordformMeaningClass, "lookupForMeanings",
+                        MethodType.methodType(List.class, String.class));
+
+                // create method handle for virtual method: 'WordformMeaning getLemma()'
+                var getLemma = lookup.findVirtual(wordformMeaningClass, "getLemma",
+                        MethodType.methodType(Class.forName("com.github.demidko.aot.WordformMeaning")));
+
+                return new MorphMethods(lookupForMeanings, getLemma);
+            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+                return null;
+            }
+        }
+
+        /**
+         * Checks if initialization has previously failed.
+         *
+         * @return {@code true} if initialization failed, {@code false} otherwise
+         */
+        private static boolean initializationFailed() {
+            return INSTANCE.get() == FAILED;
+        }
+
+        /**
+         * Marks initialization as failed to avoid repeated attempts.
+         */
+        private static void markInitializationFailed() {
+            INSTANCE.compareAndSet(null, MorphMethods.FAILED);
+        }
 
     }
 

@@ -144,10 +144,12 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
-        <!-- Russian morphology analysis. Reads a dictionary file to RAM - 110Mb! -->
+        <!-- Russian morphology analysis. Reads a dictionary file to RAM - 110Mb!
+             Optional dependency - include only if Russian word morphological analysis is needed. -->
         <dependency>
             <groupId>com.github.demidko</groupId>
             <artifactId>aot</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <dependency>

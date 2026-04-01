@@ -8,7 +8,6 @@ import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
@@ -28,7 +27,6 @@ import static java.util.function.Predicate.not;
  *
  * @see #validate(Object)
  */
-@Component
 @RequiredArgsConstructor
 public class AnnotationValidator {
 

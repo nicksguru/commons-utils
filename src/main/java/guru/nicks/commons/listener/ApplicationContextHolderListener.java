@@ -14,8 +14,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Reacts to {@link ContextRefreshedEvent} if there's a subclass set up as described in
- * {@link #onContextRefreshedEvent(ContextRefreshedEvent)}:
+ * Reacts to {@link ContextRefreshedEvent}:
  * <ul>
  *  <li>stores {@code spring.application.name} in {@link LogContext#APP_NAME} to enrich log messages</li>
  *  <li>stores {@link ApplicationContext} in {@link ApplicationContextHolder} for such use cases when it's impossible to
@@ -29,9 +28,9 @@ public class ApplicationContextHolderListener {
             this::storeApplicationContextInGlobalHolder);
 
     /**
-     * See class comment for details. Subclasses can override this method to add their own steps, also they should add
-     * {@link EventListener} annotation (for {@link ContextRefreshedEvent}) to make this method an event listener.
+     * See class comment for details.
      */
+    @EventListener(ContextRefreshedEvent.class)
     public void onContextRefreshedEvent(ContextRefreshedEvent event) {
         // this should never be null, but just in case
         if (event == null) {

@@ -1,5 +1,7 @@
 package guru.nicks.commons.config;
 
+import guru.nicks.commons.cache.ChecksumCacheKeyGenerator;
+import guru.nicks.commons.cache.ToStringJoiningCacheKeyGenerator;
 import guru.nicks.commons.listener.ApplicationContextHolderListener;
 import guru.nicks.commons.validation.AnnotationValidator;
 
@@ -36,7 +38,6 @@ public class CommonsUtilsAutoConfiguration {
         return new MethodValidationPostProcessor();
     }
 
-    @ConditionalOnMissingBean
     @Bean
     public AnnotationValidator annotationValidator(LocalValidatorFactoryBean localValidatorFactoryBean) {
         log.debug("Building {} bean", AnnotationValidator.class.getSimpleName());
@@ -48,6 +49,18 @@ public class CommonsUtilsAutoConfiguration {
     public ApplicationContextHolderListener applicationContextHolderListener() {
         log.debug("Building {} bean", ApplicationContextHolderListener.class.getSimpleName());
         return new ApplicationContextHolderListener();
+    }
+
+    @Bean
+    public ToStringJoiningCacheKeyGenerator toStringJoiningCacheKeyGenerator() {
+        log.debug("Building {} bean", ToStringJoiningCacheKeyGenerator.class.getSimpleName());
+        return new ToStringJoiningCacheKeyGenerator();
+    }
+
+    @Bean
+    public ChecksumCacheKeyGenerator checksumCacheKeyGenerator() {
+        log.debug("Building {} bean", ChecksumCacheKeyGenerator.class.getSimpleName());
+        return new ChecksumCacheKeyGenerator();
     }
 
 }

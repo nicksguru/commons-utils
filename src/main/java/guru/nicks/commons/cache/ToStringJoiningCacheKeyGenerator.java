@@ -6,7 +6,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.cache.interceptor.SimpleKeyGenerator;
-import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -22,7 +21,6 @@ import java.util.stream.Collectors;
  * too, but the key it creates is a monolith {@link SimpleKey#toString()} value having no folder-like structure:
  * {@code SimpleKey ["arg1", "arg2", ...]}.
  */
-@Component
 public class ToStringJoiningCacheKeyGenerator implements KeyGenerator {
 
     @Override

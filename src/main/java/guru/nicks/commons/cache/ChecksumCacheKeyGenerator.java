@@ -5,7 +5,6 @@ import guru.nicks.commons.utils.crypto.ChecksumUtils;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.interceptor.KeyGenerator;
-import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -17,7 +16,6 @@ import java.util.stream.Collectors;
  * keys are valid and different - it's important to not lose any arguments). To be used as
  * {@link Cacheable#keyGenerator()}.
  */
-@Component
 public class ChecksumCacheKeyGenerator implements KeyGenerator {
 
     @Override

@@ -5,14 +5,14 @@
     <parent>
         <groupId>guru.nicks.commons</groupId>
         <artifactId>parent</artifactId>
-        <version>100.260604.0</version><!-- BUNDLE_VERSION -->
+        <version>100.260605.0</version><!-- BUNDLE_VERSION -->
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <!-- groupId is redundant (inherited from parent), but required by Maven Central -->
     <groupId>guru.nicks.commons</groupId>
     <artifactId>utils</artifactId>
-    <version>100.260604.0</version><!-- BUNDLE_VERSION -->
+    <version>100.260605.0</version><!-- BUNDLE_VERSION -->
 
     <name>Nicks.Guru Commons Utils</name>
     <description>Utility classes</description>
@@ -142,12 +142,17 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
-        <!-- Russian morphology analysis. Reads a dictionary file to RAM - 110Mb!
+        <!-- Russian lemmatizer. Reads a dictionary file to RAM - 110Mb!
              Optional dependency - include only if Russian word morphological analysis is needed. -->
         <dependency>
             <groupId>com.github.demidko</groupId>
             <artifactId>aot</artifactId>
             <optional>true</optional>
+        </dependency>
+        <!-- Engish lemmatizer (lightweight) -->
+        <dependency>
+            <groupId>org.rednoise</groupId>
+            <artifactId>rita</artifactId>
         </dependency>
 
         <dependency>

@@ -20,7 +20,7 @@ public interface NgramUtilsConfig {
      * Try morphological analysis to add (not replace!) English stem ngrams to plain ones. To be precise, those are not
      * just ordinary stems, but lemmas: 'ran' is converted to 'run', 'geese' to 'goose' and so on.
      * <p>
-     * There's no dictionary read to RAM, the procedure is fast and lightweight and therefore is on by default.
+     * This procedure is fast and lightweight and therefore is on by default.
      *
      * @return {@code false} by default
      */
@@ -33,7 +33,7 @@ public interface NgramUtilsConfig {
      * just ordinary stems, but lemmas - in some languages, singular and plural forms of the same word are totally
      * different words.
      * <p>
-     * The dictionary size read to RAM is 110Mb.
+     * WARNING: the dictionary file size read to RAM is 110Mb.
      *
      * @return {@code false} by default
      */

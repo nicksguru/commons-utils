@@ -43,7 +43,7 @@ public class NgramUtilsSteps {
         };
 
         @Override
-        default boolean tryMorphAnalysis() {
+        default boolean tryRussianMorphAnalysis() {
             return true;
         }
 

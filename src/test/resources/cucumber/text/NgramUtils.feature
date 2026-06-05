@@ -1,16 +1,19 @@
 @utils #@disabled
 Feature: NgramUtils (with accented characters reduced to their ASCII equivalents)
 
-  Scenario Outline: Create prefix ngrams
+  Scenario Outline: Create prefix ngrams with English morphology
     Given input is "<input>"
     When prefix ngrams are created
-    Then output should be "<item1>", "<item2>", "<item3>"
+    Then output should be "<item1>", "<item2>", "<item3>", "<item4>"
     Examples:
-      | input | item1 | item2 | item3 |
-      | TêSt  | tes   | test  |       |
-      | tests | tes   | test  | tests |
+      | input | item1 | item2 | item3 | item4 |
+      | TêSt  | tes   | test  |       |       |
+      | tests | tes   | test  | tests |       |
+      | kept  | kep   | kept  | kee   | keep  |
+      | feet  | fee   | feet  | foo   | foot  |
+      | ran   | ran   | run   |       |       |
 
-  Scenario Outline: Create infix ngrams (actually trigrams)
+  Scenario Outline: Create infix ngrams (trigrams, unlike prefix ngrams)
     Given input is "<input>"
     When infix ngrams are created
     Then output should be "<item1>", "<item2>", "<item3>"

@@ -17,15 +17,27 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * Try morphological analysis to add stem ngrams to plain ones. To be precise, those are not just ordinary stems,
-     * but 'smart stems' - in some languages, singular and plural forms of the same word are totally different words.
+     * Try morphological analysis to add (not replace!) English stem ngrams to plain ones. To be precise, those are not
+     * just ordinary stems, but lemmas: 'ran' is converted to 'run', 'geese' to 'goose' and so on.
      * <p>
-     * The only language supported is Russian, and the size of the dictionary read to RAM is 110Mb. For English, there's
-     * no such need - infix ngrams are sufficient.
+     * There's no dictionary read to RAM, the procedure is fast and lightweight and therefore is on by default.
      *
      * @return {@code false} by default
      */
-    default boolean tryMorphAnalysis() {
+    default boolean tryEnglishMorphAnalysis() {
+        return true;
+    }
+
+    /**
+     * Try morphological analysis to add (not replace!) Russian stem ngrams to plain ones. To be precise, those are not
+     * just ordinary stems, but lemmas - in some languages, singular and plural forms of the same word are totally
+     * different words.
+     * <p>
+     * The dictionary size read to RAM is 110Mb.
+     *
+     * @return {@code false} by default
+     */
+    default boolean tryRussianMorphAnalysis() {
         return false;
     }
 

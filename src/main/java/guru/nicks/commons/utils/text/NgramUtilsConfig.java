@@ -58,10 +58,11 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * @return 12 by default
+     * @return 6 by default - enough to store unique prefixes for most English words, so the risk of word collision is
+     *         low, at the same time avoiding bloating the DB index
      */
     default int getMaxPrefixNgramLength() {
-        return 12;
+        return 6;
     }
 
     /**

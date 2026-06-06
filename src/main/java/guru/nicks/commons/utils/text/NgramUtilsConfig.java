@@ -55,15 +55,16 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * @return minimum ngram length, 3 by default (1 or 2 yield too many irrelevant search hits and increase DB size)
+     * @return minimum ngram length (both for prefix and infix ngrams), 3 by default (1 or 2 yield too many irrelevant
+     *         search hits and increase DB size)
      */
     default int getMinNgramLength() {
         return 3;
     }
 
     /**
-     * @return 6 by default - enough to store unique prefixes for most English words, so the risk of word collision is
-     *         low, at the same time avoiding bloating the DB index
+     * @return 6 by default - enough to store unique prefixes for most words, so the risk of word collision is low, at
+     *         the same time avoiding bloating the DB index
      */
     default int getMaxPrefixNgramLength() {
         return 6;
@@ -81,6 +82,17 @@ public interface NgramUtilsConfig {
      */
     default int getMaxInfixNgramLength() {
         return 3;
+    }
+
+    /**
+     * If the number of words is at this many or greater, {@link #getMaxThreads()} is called to process each word in a
+     * separate thread. Shorter texts are processed in a single thread, word by word, because multi-threading has no
+     * benefit in such cases.
+     *
+     * @return 50 by default
+     */
+    default int minWordCountForMultiThreading() {
+        return 70;
     }
 
     /**

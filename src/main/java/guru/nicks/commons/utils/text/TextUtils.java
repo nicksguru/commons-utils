@@ -126,7 +126,7 @@ public class TextUtils {
      * Extracts unique words from string.
      *
      * @param str           input string
-     * @param reduceAccents if {@code true}, accented characters are reduced to their base ones, such as {@code ä -> a}
+     * @param reduceAccents if {@code true}, accented characters are reduced to their base ones, such as {@code ä → a}
      * @return words - in lowercase, modifiable collection, sorted alphabetically; empty if input string is {@code null}
      *         or has no words in it, i.e. consists of punctuation/whitespaces only
      */

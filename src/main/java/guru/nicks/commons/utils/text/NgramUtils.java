@@ -2,7 +2,6 @@ package guru.nicks.commons.utils.text;
 
 import guru.nicks.commons.utils.FutureUtils;
 
-import am.ik.yavi.meta.ConstraintArguments;
 import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
@@ -26,18 +25,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static guru.nicks.commons.validation.dsl.ValiDsl.check;
-
 /**
  * Ngram-related utility methods. To search against ngrams, the search text should be split into n-grams too (usually
  * with {@link #createNgrams(String, Mode, NgramUtilsConfig)}). The more ngrams match against each other, the higher is
  * the search score.
  * <p>
  * English words are, if {@link NgramUtilsConfig#tryEnglishMorphAnalysis()} is on, augmented with their singular
- * 'lemmas' (ran → run, geese → goose, etc.) with stop words ('the', 'a', 'be', etc.) filtered out.
+ * 'lemmas' (ran → run, geese → goose, etc.) with stop words ('the', 'a', 'be', etc.) filtered out because they would
+ * match practically every DB record.
  * <p>
  * Russian words are, if {@link NgramUtilsConfig#tryRussianMorphAnalysis()} is on, augmented with their singular
- * 'lemmas' (morphologically analyzed forms, not just stems), for example: 'люди' ('humans') →- 'человек' ('a human').
+ * 'lemmas' (morphologically analyzed forms, not just stems), for example: 'люди' ('humans') → 'человек' ('a human').
  * <p>
  * Why add lemmas to the original words, why not just replace each word with its lemma? Because the text to search in
  * may contain irregular words, see examples above.
@@ -140,49 +138,65 @@ public class NgramUtils {
                 : config.getMaxInfixNgramLength();
         var ngrams = new TreeSet<String>();
 
-        // Process words in parallel according to settings. Don't pre-create a supplier for each word - the number
-        // of words may be large. Instead, create suppliers in chunks.
-        for (var iterator = words.iterator(); iterator.hasNext(); ) {
-            var wordProcessors = new ArrayList<Supplier<Set<String>>>(config.getMaxThreads());
-
-            for (int i = 0; (i < config.getMaxThreads()) && iterator.hasNext(); i++) {
-                String word = iterator.next();
-
-                wordProcessors.add(() -> {
-                    // special case: English stop words don't make their way into plain ngrams
-                    if (config.tryEnglishMorphAnalysis() && EnglishMorphMethods.isStopWord(word)) {
-                        return Collections.emptySortedSet();
-                    }
-
-                    SortedSet<String> plainNgrams = generatePlainNgrams(word,
-                            startEachWordOffset, endEachWordOffset,
-                            config.getMinNgramLength(), maxNgramLength);
-
-                    if (config.tryEnglishMorphAnalysis()) {
-                        SortedSet<String> morphNgrams = generateEnglishMorphNgrams(word,
-                                startEachWordOffset, endEachWordOffset,
-                                config.getMinNgramLength(), maxNgramLength);
-
-                        plainNgrams.addAll(morphNgrams);
-                    }
-
-                    if (config.tryRussianMorphAnalysis()) {
-                        SortedSet<String> morphNgrams = generateRussianMorphNgrams(word,
-                                startEachWordOffset, endEachWordOffset,
-                                config.getMinNgramLength(), maxNgramLength);
-
-                        plainNgrams.addAll(morphNgrams);
-                    }
-
-                    return plainNgrams;
-                });
+        if (words.size() < config.minWordCountForMultiThreading()) {
+            for (String word : words) {
+                SortedSet<String> wordNgrams = generateNgramsForWord(config, startEachWordOffset, endEachWordOffset,
+                        word, maxNgramLength);
+                ngrams.addAll(wordNgrams);
             }
+        }
+        // Process words in parallel. Don't pre-create a supplier for each word - the number of words may be large.
+        // Instead, create suppliers in chunks.
+        else {
+            for (var iterator = words.iterator(); iterator.hasNext(); ) {
+                var wordProcessors = new ArrayList<Supplier<Set<String>>>(config.getMaxThreads());
 
-            FutureUtils.getInParallel(wordProcessors)
-                    .forEach(ngrams::addAll);
+                for (int i = 0; (i < config.getMaxThreads()) && iterator.hasNext(); i++) {
+                    String word = iterator.next();
+
+                    wordProcessors.add(() -> generateNgramsForWord(config, startEachWordOffset, endEachWordOffset,
+                            word, maxNgramLength));
+                }
+
+                FutureUtils.getInParallel(wordProcessors)
+                        .forEach(ngrams::addAll);
+            }
         }
 
         return limitNgramCount(ngrams, config);
+    }
+
+    /**
+     * Called from {@link #generateNgrams(String, NgramUtilsConfig, int, int)}. See description of arguments there.
+     */
+    private static SortedSet<String> generateNgramsForWord(NgramUtilsConfig config, int startEachWordOffset,
+            int endEachWordOffset, String word, int maxNgramLength) {
+        // special case: English stop words don't make their way into ANY ngrams
+        if (config.tryEnglishMorphAnalysis() && EnglishMorphMethods.isStopWord(word)) {
+            return Collections.emptySortedSet();
+        }
+
+        SortedSet<String> plainNgrams = generatePlainNgrams(word,
+                startEachWordOffset, endEachWordOffset,
+                config.getMinNgramLength(), maxNgramLength);
+
+        if (config.tryEnglishMorphAnalysis()) {
+            SortedSet<String> morphNgrams = generateEnglishMorphNgrams(word,
+                    startEachWordOffset, endEachWordOffset,
+                    config.getMinNgramLength(), maxNgramLength);
+
+            plainNgrams.addAll(morphNgrams);
+        }
+
+        if (config.tryRussianMorphAnalysis()) {
+            SortedSet<String> morphNgrams = generateRussianMorphNgrams(word,
+                    startEachWordOffset, endEachWordOffset,
+                    config.getMinNgramLength(), maxNgramLength);
+
+            plainNgrams.addAll(morphNgrams);
+        }
+
+        return plainNgrams;
     }
 
     /**
@@ -199,19 +213,9 @@ public class NgramUtils {
      * @param maxNgramLength maximum ngram length (will be normalized to fit in the string length)
      * @return ngrams (modifiable collection)
      */
-    @ConstraintArguments
     private static SortedSet<String> generatePlainNgrams(String word,
             int startOffset, int endOffset,
             int minNgramLength, int maxNgramLength) {
-        check(startOffset, _NgramUtilsGeneratePlainNgramsArgumentsMeta.STARTOFFSET.name()).positiveOrZero();
-        check(endOffset, _NgramUtilsGeneratePlainNgramsArgumentsMeta.ENDOFFSET.name()).constraint(it ->
-                it >= startOffset, "must be >= " + _NgramUtilsGeneratePlainNgramsArgumentsMeta.STARTOFFSET.name());
-
-        check(minNgramLength, _NgramUtilsGeneratePlainNgramsArgumentsMeta.MINNGRAMLENGTH.name()).positive();
-        check(maxNgramLength, _NgramUtilsGeneratePlainNgramsArgumentsMeta.MAXNGRAMLENGTH.name()).constraint(it ->
-                        it >= minNgramLength,
-                "must be >= " + _NgramUtilsGeneratePlainNgramsArgumentsMeta.MINNGRAMLENGTH.name());
-
         var ngrams = new TreeSet<String>();
 
         // nothing to do if the string is too short
@@ -268,7 +272,8 @@ public class NgramUtils {
      * This method only works if {@code com.github.demidko.aot.WordformMeaning} is available on the classpath. If the
      * class is not available, returns an empty collection.
      * <p>
-     * WARNING: the lemma is only processed if its length is within the ngram length and word offset limits.
+     * WARNING: the lemma is only processed (split into ngrams) if its length is within the ngram length and word offset
+     * limits.
      *
      * @return ngrams (empty unmodifiable collection if morphological analysis is not available - no class on the
      *         classpath - or the word is not a Russian one; modifiable collection otherwise)
@@ -305,7 +310,7 @@ public class NgramUtils {
                 }
             }
         } catch (Throwable t) {
-            throw new RuntimeException("Morphological analysis failed: " + t.getMessage(), t);
+            throw new IllegalStateException("Morphological analysis failed: " + t.getMessage(), t);
         }
 
         return (ngrams == null)
@@ -826,7 +831,7 @@ public class NgramUtils {
 
         /**
          * Converts English words to their base forms, taking into account some (but not all) irregular words. The
-         * common stop words are not filtered out, rathe processed, such as 'was' becomes 'be'.
+         * common stop words are not filtered out, rather processed, such as 'was' becomes 'be'.
          *
          * @param word must be non-blank in lowercase already, for speed reasons
          * @return base word form (lemma)

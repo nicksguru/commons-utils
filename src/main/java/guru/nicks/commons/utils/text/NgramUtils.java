@@ -84,6 +84,20 @@ public class NgramUtils {
     }
 
     /**
+     * Checks if the word is an English stop word: 'the', 'a', 'was', 'it', etc.
+     *
+     * @param word word to check (will be converted to lowercase with leading and trailing whitespace trimmed)
+     * @return {@code true} if the word is a stop word
+     */
+    public static boolean englishStopWord(String word) {
+        if (StringUtils.isBlank(word)) {
+            return false;
+        }
+
+        return EnglishMorphMethods.stopWord(word.strip().toLowerCase());
+    }
+
+    /**
      * Creates prefix ngrams - processes each word starting with its 1st letter, for example: 'strings' -> 'str' 'stri',
      * 'strin', 'string' (if trigrams are needed, the only one is 'str').
      * <p>
@@ -172,7 +186,7 @@ public class NgramUtils {
     private static SortedSet<String> generateNgramsForWord(NgramUtilsConfig config, int startEachWordOffset,
             int endEachWordOffset, String word, int maxNgramLength) {
         // special case: English stop words don't make their way into ANY ngrams
-        if (config.tryEnglishMorphAnalysis() && EnglishMorphMethods.isStopWord(word)) {
+        if (config.tryEnglishMorphAnalysis() && EnglishMorphMethods.stopWord(word)) {
             return Collections.emptySortedSet();
         }
 
@@ -825,7 +839,7 @@ public class NgramUtils {
          * @param word must be non-blank in lowercase already, for speed reasons
          * @return {@code true} if the word is a stop word
          */
-        static boolean isStopWord(String word) {
+        static boolean stopWord(String word) {
             return EnglishMorphMethods.STOP_WORDS.contains(word);
         }
 

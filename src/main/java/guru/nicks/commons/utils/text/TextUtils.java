@@ -33,7 +33,7 @@ public class TextUtils {
      * {@code "!#$%&'()*+,-./:;<=>?@[\]^_`{ |}~} and Unicode whitespaces ({@link Character#isWhitespace(char)} - this is
      * much more than {@code \s} which is ASCII only).
      */
-    private static final Pattern SPLIT_INTO_WORDS_PATTERN = Pattern.compile("[\\p{Punct}\\p{javaSpaceChar}]+");
+    private static final Pattern SPLIT_INTO_WORDS_PATTERN = Pattern.compile("[\\p{Punct}\\p{javaSpaceChar}\s\r\n\t]+");
 
     /**
      * Pre-compiled (to avoid repetitive on the fly recompilation) regexp that matches a comma surrounded by one or more

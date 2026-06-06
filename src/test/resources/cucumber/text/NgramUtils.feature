@@ -6,12 +6,16 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
     When prefix ngrams are created
     Then output should be "<item1>", "<item2>", "<item3>", "<item4>"
     Examples:
-      | input | item1 | item2 | item3 | item4 |
-      | TêSt  | tes   | test  |       |       |
-      | tests | tes   | test  | tests |       |
-      | kept  | kep   | kept  | kee   | keep  |
-      | feet  | fee   | feet  | foo   | foot  |
-      | ran   | ran   | run   |       |       |
+      | input | item1 | item2 | item3 | item4 | comments                    |
+      | TêSt  | tes   | test  |       |       |                             |
+      | tests | tes   | test  | tests |       |                             |
+      | kept  | kee   | keep  | kep   | kept  | the lemma is 'keep'         |
+      | feet  | fee   | feet  | foo   | foot  | the lemma is 'foot'         |
+      | was   |       |       |       |       | stop word - no grams at all |
+      | a     |       |       |       |       | stop word                   |
+      | it    |       |       |       |       | stop word                   |
+      | ran   | ran   | run   |       |       | irregular verb              |
+
 
   Scenario Outline: Create infix ngrams (actually trigrams)
     Given input is "<input>"
@@ -27,9 +31,9 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
     When prefix and infix ngrams are created
     Then output should be "<item1>", "<item2>", "<item3>", "<item4>", "<item5>"
     Examples:
-      | input | item1 | item2 | item3 | item4 | item5 |
-      | tests | tes   | test  | tests | est   | sts   |
-      | TêSt  | tes   | test  | est   |       |       |
+      | input | item1 | item2 | item3 | item4 | item5 | comments                                |
+      | tests | tes   | test  | tests | est   | sts   | prefix ngrams go first                  |
+      | TêSt  | tes   | test  | est   |       |       | both prefix and infix ngrams are sorted |
 
   Scenario Outline: Russian morphology analysis (no more than 6 letters in each prefix ngram)
     Given input is "<input>"
@@ -39,5 +43,5 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
       | input   | item1 | item2 | item3 | item4  | item5 | item6  | comments                                 |
       | люди    | люд   | люди  | чел   | чело   | челов | челове | singular differs from plural drastically |
       | тест    | тес   | тест  | тесто |        |       |        | analyser mismatches 'тест' for 'тесто'   |
-      | словАми | сло   | слов  | слова | словам | слово |        | different vowel in item6                 |
+      | словАми | сло   | слов  | слова | словам | слово |        | different vowel in item5                 |
       | ёлка    | елк   | елка  |       |        |       |        | ё -> е                                   |

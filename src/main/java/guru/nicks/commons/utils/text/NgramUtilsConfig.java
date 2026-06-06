@@ -17,8 +17,12 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * Try morphological analysis to add (not replace!) English stem ngrams to plain ones. To be precise, those are not
-     * just ordinary stems, but lemmas: 'ran' is converted to 'run', 'geese' to 'goose' and so on.
+     * Try morphological analysis to add English stem ngrams to plain ones. To be precise, those are not just ordinary
+     * stems, but lemmas: 'ran' is converted to 'run', 'geese' to 'goose' and so on. Thus, if the original word is
+     * 'geese', its ngrams are augmented with those for 'goose' - to retain search relevancy when user types 'geese'.
+     * <p>
+     * WARNING: if this feature is on, the common stop words ('the', 'a', 'was', 'it', etc.) are removed completely, so
+     * they are not part of the plain ngrams either.
      * <p>
      * This procedure is fast and lightweight and therefore is on by default.
      *
@@ -29,9 +33,9 @@ public interface NgramUtilsConfig {
     }
 
     /**
-     * Try morphological analysis to add (not replace!) Russian stem ngrams to plain ones. To be precise, those are not
-     * just ordinary stems, but lemmas - in some languages, singular and plural forms of the same word are totally
-     * different words.
+     * Try morphological analysis to add Russian stem ngrams to plain ones. To be precise, those are not just ordinary
+     * stems, but lemmas - in some languages, singular and plural forms of the same word are totally different words.
+     * The ngrams for the original words are still needed to retain search relevancy when user types the original word.
      * <p>
      * WARNING: the dictionary file size read to RAM is 110Mb.
      *

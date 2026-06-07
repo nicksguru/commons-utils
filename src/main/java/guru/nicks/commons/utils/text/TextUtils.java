@@ -8,17 +8,12 @@ import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.SequencedSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static java.util.function.Predicate.not;
 
 /**
  * Text-related utility methods.
@@ -29,19 +24,26 @@ public class TextUtils {
     public static final Predicate<String> ALL_ZEROES_PREDICATE = Pattern.compile("^0+$").asMatchPredicate();
 
     /**
-     * Pre-compiled (to avoid repetitive on the fly recompilation) regexp that matches
-     * {@code "!#$%&'()*+,-./:;<=>?@[\]^_`{ |}~} and Unicode whitespaces ({@link Character#isWhitespace(char)} - this is
-     * much more than {@code \s} which is ASCII only).
+     * WARNING: {@code javaSpaceChar} does not span '\r\n\t\v' ({@code javaWhitespace} does). But the latter does not
+     * span Unicode spaces, therefore these two should be combined.
      */
-    private static final Pattern SPLIT_INTO_WORDS_PATTERN = Pattern.compile("[\\p{Punct}\\p{javaSpaceChar}\s\r\n\t]+");
+    private static final String ANY_WHITESPACE = "\\p{javaSpaceChar}\\p{javaWhitespace}";
+
+    /**
+     * Pre-compiled (to avoid repetitive on the fly recompilation) regexp that matches '\r\n\t\v',
+     * {@code "!#$%&'()*+,-./:;<=>?@[\]^_`{ |}~}, and Unicode whitespaces.
+     */
+    private static final Pattern SPLIT_INTO_WORDS_PATTERN = Pattern.compile("[\\p{Punct}" + ANY_WHITESPACE + "]+");
 
     /**
      * Pre-compiled (to avoid repetitive on the fly recompilation) regexp that matches a comma surrounded by one or more
      * {@link Character#isWhitespace(char)}. The latter matches Unicode whitespaces - much more than {@code \s} which is
      * for ASCII only.
      */
-    private static final Pattern SPLIT_BY_COMMA_PATTERN = Pattern.compile("\\p{javaSpaceChar}*,\\p{javaSpaceChar}*");
-    private static final Pattern SPLIT_BY_WHITESPACES_PATTERN = Pattern.compile("\\p{javaSpaceChar}+");
+    private static final Pattern SPLIT_BY_COMMA_PATTERN = Pattern.compile(
+            "[" + ANY_WHITESPACE + "]*,[" + ANY_WHITESPACE + "]*");
+    private static final Pattern SPLIT_BY_WHITESPACES_PATTERN = Pattern.compile(
+            "[" + ANY_WHITESPACE + "]+");
 
     /**
      * Each range is split into 3 parts:
@@ -101,38 +103,15 @@ public class TextUtils {
     }
 
     /**
-     * Splits comma-separated values into trimmed unique non-blank strings. For example,
-     * {@code ' a,b ,,c, ,A,a,' -> [a,b,c,A]}.
-     *
-     * @param commaSeparatedValues values
-     * @return items (with case and order preserved), modifiable collection
-     */
-    @SuppressWarnings("java:S1319")
-    public static SequencedSet<String> collectUniqueCommaSeparated(@Nullable String commaSeparatedValues) {
-        if (commaSeparatedValues == null) {
-            // has to be modifiable
-            return new LinkedHashSet<>();
-        }
-
-        String[] words = SPLIT_BY_COMMA_PATTERN.split(commaSeparatedValues);
-
-        // skip ''
-        return Arrays.stream(words)
-                .filter(not(String::isEmpty))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    /**
      * Extracts unique words from string.
      *
      * @param str           input string
      * @param reduceAccents if {@code true}, accented characters are reduced to their base ones, such as {@code ä → a}
-     * @return words - in lowercase, modifiable collection, sorted alphabetically; empty if input string is {@code null}
-     *         or has no words in it, i.e. consists of punctuation/whitespaces only
+     * @return words (sorted alphabetically), in lowercase, modifiable collection
      */
     public static SortedSet<String> collectUniqueWords(@Nullable String str, boolean reduceAccents) {
-        if (str == null) {
-            // has to be modifiable
+        if (StringUtils.isBlank(str)) {
+            // has to be modifiable, see contract
             return new TreeSet<>();
         }
 
@@ -140,41 +119,58 @@ public class TextUtils {
             str = reduceAccents(str);
         }
 
-        return new TreeSet<>(splitIntoWords(str));
+        return new TreeSet<>(splitIntoWords(str.toLowerCase()));
     }
 
     /**
      * Splits string into (non-unique) words by whitespace and punctuation characters.
      *
      * @param str input string
-     * @return words - in lowercase, modifiable collection; empty if input string is {@code null} or has no words in it,
-     *         i.e. consists of punctuation/whitespaces only
+     * @return words (with character case preserved), modifiable collection
      * @see #collectUniqueWords(String, boolean)
      */
     public static List<String> splitIntoWords(@Nullable String str) {
-        if (str == null) {
+        if (StringUtils.isBlank(str)) {
+            // has to be modifiable, see contract
+            return new ArrayList<>(0);
+        }
+
+        String[] array = SPLIT_INTO_WORDS_PATTERN.split(str);
+        return toListWithoutBlankStrings(array);
+    }
+
+    /**
+     * Splits string into (non-unique) items by a comma surrounded by optional whitespaces. To retain unique items only,
+     * pass the result to an appropriate {@link Set} implementation.
+     *
+     * @param str input string
+     * @return items (with character case preserved), modifiable collection
+     */
+    public static List<String> splitByComma(@Nullable String str) {
+        if (StringUtils.isBlank(str)) {
             // has to be modifiable
             return new ArrayList<>(0);
         }
 
-        String[] array = SPLIT_INTO_WORDS_PATTERN.split(str.toLowerCase());
-        return toListWithoutEmptyStrings(array);
+        String[] array = SPLIT_BY_COMMA_PATTERN.split(str);
+        return toListWithoutBlankStrings(array);
     }
 
     /**
-     * Splits string into (non-unique) parts by whitespaces.
+     * Splits string into (non-unique) items by whitespaces. To retain unique items only, pass the result to a
+     * {@link Set}.
      *
      * @param str input string
-     * @return parts, modifiable collection
+     * @return items (with character case preserved), modifiable collection
      */
     public static List<String> splitByWhitespaces(@Nullable String str) {
-        if (str == null) {
+        if (StringUtils.isBlank(str)) {
             // has to be modifiable
             return new ArrayList<>(0);
         }
 
         String[] array = SPLIT_BY_WHITESPACES_PATTERN.split(str);
-        return toListWithoutEmptyStrings(array);
+        return toListWithoutBlankStrings(array);
     }
 
     /**
@@ -229,13 +225,13 @@ public class TextUtils {
      * Converts string array to list without empty strings.
      *
      * @param array string array
-     * @return modifiable list without empty strings (but possibly with blank ones)
+     * @return modifiable list without blank strings
      */
-    private static ArrayList<String> toListWithoutEmptyStrings(String[] array) {
+    private static ArrayList<String> toListWithoutBlankStrings(String[] array) {
         var result = new ArrayList<String>(array.length);
 
         for (String str : array) {
-            if (!StringUtils.isEmpty(str)) {
+            if (!StringUtils.isBlank(str)) {
                 result.add(str);
             }
         }

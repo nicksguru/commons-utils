@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.jwt.JwtException;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -141,8 +142,8 @@ public class JwtUtils {
         return switch (result) {
             case null -> Collections.emptySet();
 
-            // parse comma-separated list
-            case String str -> TextUtils.collectUniqueCommaSeparated(str);
+            // parse comma-separated list, retain unique items only
+            case String str -> new LinkedHashSet<>(TextUtils.splitByComma(str));
 
             case Collection<?> collection -> collection.stream()
                     .filter(Objects::nonNull)

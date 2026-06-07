@@ -17,7 +17,7 @@ public class TextUtilsSteps {
     @When("comma-separated string is parsed")
     public void commaSeparatedStringIsParsed() {
         textWorld.setOutput(new ArrayList<>(
-                TextUtils.collectUniqueCommaSeparated(textWorld.getInput())));
+                TextUtils.splitByComma(textWorld.getInput())));
     }
 
     @When("unique words are collected, reducing accented characters")

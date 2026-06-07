@@ -4,13 +4,13 @@ Feature: TextUtils
   Scenario Outline: Parse comma-separated values
     Given input is "<input>"
     When comma-separated string is parsed
-    Then output should be "<item1>", "<item2>", "<item3>"
+    Then output should be "<item1>", "<item2>", "<item3>", "<item4>"
     Examples:
-      | input                   | item1 | item2 | item3 |
-      | test                    | test  |       |       |
-      | test1,TEst2,test1,test2 | test1 | TEst2 | test2 |
-      | ,test1,test2,1-2-3      | test1 | test2 | 1-2-3 |
-      | ,,test1,,test2,,test3,  | test1 | test2 | test3 |
+      | input                    | item1 | item2 | item3 | item4 |
+      | test                     | test  |       |       |       |
+      | test1, TEst2,test1,test2 | test1 | TEst2 | test1 | test2 |
+      | ,test1 ,test2, 1-2-3     | test1 | test2 | 1-2-3 |       |
+      | ,,test1,,test2,,test3,   | test1 | test2 | test3 |       |
 
   Scenario Outline: Split string into words
     Given input is "<input>"
@@ -20,15 +20,15 @@ Feature: TextUtils
       | input                   | item1 | item2 | item3 |
       | test                    | test  |       |       |
       | test-test               | test  | test  |       |
-      | test-TEst               | test  | test  |       |
-      | test 12_3               | test  | 12    | 3     |
-      | Têst,tèSt,tésT          | têst  | tèst  | tést  |
-      | TEst1 teST2 tEst3       | test1 | test2 | test3 |
+      | test-TEst               | test  | TEst  |       |
+      | test\n12_3              | test  | 12    | 3     |
+      | Têst,tèSt,tésT          | Têst  | tèSt  | tésT  |
+      | TEst1 teST2 tEst3       | TEst1 | teST2 | tEst3 |
       | test,,test              | test  | test  |       |
       | test1_test2 test3       | test1 | test2 | test3 |
       | ,test1/test2,test1      | test1 | test2 | test1 |
-      | ,tOst1[tÂst2`]tÒst1+%   | tost1 | tâst2 | tòst1 |
-      | @@TEST1::tÎst2,:,tãst3& | test1 | tîst2 | tãst3 |
+      | ,tOst1[tÂst2`]tÒst1+%   | tOst1 | tÂst2 | tÒst1 |
+      | @@TEST1::tÎst2,:,tãst3& | TEST1 | tÎst2 | tãst3 |
 
   Scenario Outline: Collect unique words, reducing accents to their base characters
     Given input is "<input>"

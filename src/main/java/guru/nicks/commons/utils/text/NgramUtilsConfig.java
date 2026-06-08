@@ -84,25 +84,4 @@ public interface NgramUtilsConfig {
         return 3;
     }
 
-    /**
-     * If the number of words is at this many or greater, {@link #getMaxThreads()} is called to process each word in a
-     * separate thread. Shorter texts are processed in a single thread, word by word, because multi-threading has no
-     * benefit in such cases.
-     *
-     * @return 50 by default
-     */
-    default int minWordCountForMultiThreading() {
-        return 70;
-    }
-
-    /**
-     * Returns the maximum number of threads to use for word processing.
-     *
-     * @return 10 by default
-     *
-     */
-    default int getMaxThreads() {
-        return 10;
-    }
-
 }

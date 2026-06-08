@@ -1,29 +1,20 @@
 package guru.nicks.commons.utils.text;
 
-import guru.nicks.commons.utils.FutureUtils;
-
 import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 import rita.RiTa;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedSet;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * Ngram-related utility methods. To search against ngrams, the search text should be split into n-grams too (usually
@@ -47,6 +38,8 @@ import java.util.stream.Collectors;
 @UtilityClass
 public class NgramUtils {
 
+    public static final int ASSUMED_NGRAMS_PER_WORD = 7;
+
     /**
      * Creates ngrams for unique words.
      * <p>
@@ -62,8 +55,7 @@ public class NgramUtils {
     public static SequencedSet<String> createNgrams(String str, Mode mode, NgramUtilsConfig config) {
         SequencedSet<String> ngrams = switch (mode) {
             case ALL -> {
-                // downgrade sorted set to linked one, so infix ngrams will be added to its tail
-                SequencedSet<String> prefixNgrams = new LinkedHashSet<>(createPrefixNgrams(str, config));
+                SequencedSet<String> prefixNgrams = createPrefixNgrams(str, config);
                 SequencedSet<String> infixNgrams = createInfixNgrams(str, config);
 
                 // temporarily, this set may hold two times the max. ngram count
@@ -74,8 +66,8 @@ public class NgramUtils {
                 yield prefixNgrams;
             }
 
-            case PREFIX_ONLY -> createPrefixNgrams(str, config);
-            case INFIX_ONLY -> createInfixNgrams(str, config);
+            case PREFIX -> createPrefixNgrams(str, config);
+            case INFIX -> createInfixNgrams(str, config);
         };
 
         @SuppressWarnings("java:S1488") // redundant local variable, for debugging
@@ -105,8 +97,7 @@ public class NgramUtils {
      *
      * @param str    input string
      * @param config configuration
-     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} elements to avoid memory
-     *         overflow, prefix ngrams go first - they have precedence before collection truncation)
+     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
     private static SequencedSet<String> createPrefixNgrams(String str, NgramUtilsConfig config) {
         return generateNgrams(str, config, 0, 0);
@@ -120,8 +111,7 @@ public class NgramUtils {
      *
      * @param str    input string
      * @param config configuration
-     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} elements to avoid memory
-     *         overflow, prefix ngrams go first - they have precedence before collection truncation)
+     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
     private static SequencedSet<String> createInfixNgrams(String str, NgramUtilsConfig config) {
         return generateNgrams(str, config, 1, Integer.MAX_VALUE);
@@ -139,42 +129,21 @@ public class NgramUtils {
      * @param startEachWordOffset offset in each word to start at
      * @param endEachWordOffset   offset in each word to finish at (word lengths differ, so pass
      *                            {@link Integer#MAX_VALUE} to process each word fully)
-     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} elements to avoid memory
-     *         overflow, prefix ngrams go first - they have precedence before collection truncation)
+     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
     private static SequencedSet<String> generateNgrams(String str, NgramUtilsConfig config,
             int startEachWordOffset, int endEachWordOffset) {
         // avoid processing the same word twice
         Set<String> words = TextUtils.collectUniqueWords(str, config.isReduceAccents());
+        SequencedSet<String> ngrams = LinkedHashSet.newLinkedHashSet(words.size() * ASSUMED_NGRAMS_PER_WORD);
 
+        // 0 means prefix ngrams are to be generated
         int maxNgramLength = (startEachWordOffset == 0)
                 ? config.getMaxPrefixNgramLength()
                 : config.getMaxInfixNgramLength();
-        var ngrams = new TreeSet<String>();
 
-        if (words.size() < config.minWordCountForMultiThreading()) {
-            for (String word : words) {
-                SortedSet<String> wordNgrams = generateNgramsForWord(config, startEachWordOffset, endEachWordOffset,
-                        word, maxNgramLength);
-                ngrams.addAll(wordNgrams);
-            }
-        }
-        // Process words in parallel. Don't pre-create a supplier for each word - the number of words may be large.
-        // Instead, create suppliers in chunks.
-        else {
-            for (var iterator = words.iterator(); iterator.hasNext(); ) {
-                var wordProcessors = new ArrayList<Supplier<Set<String>>>(config.getMaxThreads());
-
-                for (int i = 0; (i < config.getMaxThreads()) && iterator.hasNext(); i++) {
-                    String word = iterator.next();
-
-                    wordProcessors.add(() -> generateNgramsForWord(config, startEachWordOffset, endEachWordOffset,
-                            word, maxNgramLength));
-                }
-
-                FutureUtils.getInParallel(wordProcessors)
-                        .forEach(ngrams::addAll);
-            }
+        for (String word : words) {
+            addWordNgrams(config, startEachWordOffset, endEachWordOffset, word, maxNgramLength, ngrams);
         }
 
         return limitNgramCount(ngrams, config);
@@ -183,40 +152,31 @@ public class NgramUtils {
     /**
      * Called from {@link #generateNgrams(String, NgramUtilsConfig, int, int)}. See description of arguments there.
      */
-    private static SortedSet<String> generateNgramsForWord(NgramUtilsConfig config, int startEachWordOffset,
-            int endEachWordOffset, String word, int maxNgramLength) {
+    private static void addWordNgrams(NgramUtilsConfig config, int startEachWordOffset, int endEachWordOffset,
+            String word, int maxNgramLength, Set<String> whereToAdd) {
         // special case: English stop words don't make their way into ANY ngrams
         if (config.tryEnglishMorphAnalysis() && EnglishMorphMethods.stopWord(word)) {
-            return Collections.emptySortedSet();
+            return;
         }
 
-        SortedSet<String> plainNgrams = generatePlainNgrams(word,
-                startEachWordOffset, endEachWordOffset,
-                config.getMinNgramLength(), maxNgramLength);
+        addRawNgrams(word, startEachWordOffset, endEachWordOffset,
+                config.getMinNgramLength(), maxNgramLength, whereToAdd);
 
         if (config.tryEnglishMorphAnalysis()) {
-            SortedSet<String> morphNgrams = generateEnglishMorphNgrams(word,
-                    startEachWordOffset, endEachWordOffset,
-                    config.getMinNgramLength(), maxNgramLength);
-
-            plainNgrams.addAll(morphNgrams);
+            addEnglishMorphNgrams(word, startEachWordOffset, endEachWordOffset,
+                    config.getMinNgramLength(), maxNgramLength, whereToAdd);
         }
 
         if (config.tryRussianMorphAnalysis()) {
-            SortedSet<String> morphNgrams = generateRussianMorphNgrams(word,
-                    startEachWordOffset, endEachWordOffset,
-                    config.getMinNgramLength(), maxNgramLength);
-
-            plainNgrams.addAll(morphNgrams);
+            addRussianMorphNgrams(word, startEachWordOffset, endEachWordOffset,
+                    config.getMinNgramLength(), maxNgramLength, whereToAdd);
         }
-
-        return plainNgrams;
     }
 
     /**
      * Given a string, generates ngrams for it.
      * <p>
-     * WARNING: the original word are part of the result only if its length is within the ngram length limits.
+     * WARNING: the original word is part of the result only if its length is within the ngram length limits.
      *
      * @param word           word to process
      * @param startOffset    offset in string to start at (if it's equal to or greater than the string length, nothing
@@ -225,16 +185,13 @@ public class NgramUtils {
      *                       input string is simply processed fully)
      * @param minNgramLength minimum ngram length
      * @param maxNgramLength maximum ngram length (will be normalized to fit in the string length)
-     * @return ngrams (modifiable collection)
+     * @param whereToAdd     where to add the ngrams
      */
-    private static SortedSet<String> generatePlainNgrams(String word,
-            int startOffset, int endOffset,
-            int minNgramLength, int maxNgramLength) {
-        var ngrams = new TreeSet<String>();
-
+    private static void addRawNgrams(String word, int startOffset, int endOffset,
+            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
         // nothing to do if the string is too short
-        if (StringUtils.isBlank(word) || (startOffset >= word.length())) {
-            return ngrams;
+        if (startOffset >= word.length()) {
+            return;
         }
 
         int fixedMaxGramLength = Math.min(word.length() - startOffset, maxNgramLength);
@@ -246,90 +203,67 @@ public class NgramUtils {
                     break;
                 }
 
-                ngrams.add(word.substring(i, i + ngramLength));
+                whereToAdd.add(word.substring(i, i + ngramLength));
             }
         }
-
-        return ngrams;
     }
 
     /**
      * Performs morphology analysis for English and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
-     * arguments and return value, see {@link #generatePlainNgrams(String, int, int, int, int)}. The common stop words
+     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, Set)}. The common stop words
      * (such as 'the', be') are NOT filtered out, rather processed ('was' becomes 'be' etc.).
      * <p>
      * This method is light-weight, requires no dictionary, converts 'ran' to 'run', 'geese' to 'goose' and so on.
      * <p>
      * WARNING: the lemma is only processed if its length is within the ngram length and word offset limits. For
      * example, 'was' becomes 'be' whose length (2) is smaller than the common minimum ngram length (3). In this case,
-     * this method returns an empty collection.
+     * this method returns an empty collection.s
      *
-     * @param word must be non-blank in lowercase already, for speed reasons
-     * @return ngrams (empty unmodifiable collection or non-empty modifiable one)
+     * @param word must be non-blank and in lowercase already, for speed reasons
      */
-    private static SortedSet<String> generateEnglishMorphNgrams(String word,
-            int startEachWordOffset, int endEachWordOffset,
-            int minNgramLength, int maxNgramLength) {
+    private static void addEnglishMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
+            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
         String lemma = EnglishMorphMethods.lemmatize(word);
-
-        // lemma might be the word itself or a prefix of the original word (i.e. part of plain prefix ngrams already)
-        return !Strings.CS.startsWith(word, lemma)
-                ? generatePlainNgrams(lemma,
-                startEachWordOffset, endEachWordOffset, minNgramLength, maxNgramLength)
-                : Collections.emptySortedSet();
+        addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
+                minNgramLength, maxNgramLength, whereToAdd);
     }
 
     /**
      * Performs morphology analysis for Russian and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
-     * arguments and return value, see {@link #generatePlainNgrams(String, int, int, int, int)}.
+     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, Set)}.
      * <p>
      * This method only works if {@code com.github.demidko.aot.WordformMeaning} is available on the classpath. If the
      * class is not available, returns an empty collection.
      * <p>
      * WARNING: the lemma is only processed (split into ngrams) if its length is within the ngram length and word offset
      * limits.
-     *
-     * @return ngrams (empty unmodifiable collection if morphological analysis is not available - no class on the
-     *         classpath - or the word is not a Russian one; modifiable collection otherwise)
      */
-    private static SortedSet<String> generateRussianMorphNgrams(String word,
-            int startEachWordOffset, int endEachWordOffset,
-            int minNgramLength, int maxNgramLength) {
+    private static void addRussianMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
+            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
         // check if the optional AOT dependency is available on the classpath
         RussianMorphMethods morphMethods = RussianMorphMethods.getMethodsOrNull();
         if (morphMethods == null) {
-            return Collections.emptySortedSet();
+            return;
         }
 
-        SortedSet<String> ngrams = null;
-
         try {
-            // empty list for unknown words, for example for all non-Russian ones
+            // empty list for unknown words, for example for any non-Russian ones
             List<?> meanings = (List<?>) morphMethods.lookupForMeanings().invokeExact(word);
+
+            if (meanings.isEmpty()) {
+                return;
+            }
 
             for (Object meaning : meanings) {
                 Object lemma = morphMethods.getLemma().invoke(meaning);
                 String lemmaString = lemma.toString();
 
-                if (ngrams == null) {
-                    ngrams = new TreeSet<>();
-                }
-
-                // lemma might be the word itself or a prefix of the original word (i.e. part of plain prefix ngrams)
-                if (!Strings.CS.startsWith(word, lemmaString)) {
-                    Set<String> plainNgrams = generatePlainNgrams(lemmaString,
-                            startEachWordOffset, endEachWordOffset,
-                            minNgramLength, maxNgramLength);
-                    ngrams.addAll(plainNgrams);
-                }
+                addRawNgrams(lemmaString, startEachWordOffset, endEachWordOffset,
+                        minNgramLength, maxNgramLength, whereToAdd);
             }
         } catch (Throwable t) {
             throw new IllegalStateException("Morphological analysis failed: " + t.getMessage(), t);
         }
-
-        return (ngrams == null)
-                ? Collections.emptySortedSet()
-                : ngrams;
     }
 
     /**
@@ -344,9 +278,21 @@ public class NgramUtils {
             return ngrams;
         }
 
-        return ngrams.stream()
-                .limit(config.getMaxNgramCount())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        // set initial capacity (adjusted by the load factor) to avoid rehashing
+        SequencedSet<String> result = LinkedHashSet.newLinkedHashSet(config.getMaxNgramCount());
+        int count = 0;
+
+        // for-each is more efficient than iterator
+        for (String ngram : ngrams) {
+            if (count >= config.getMaxNgramCount()) {
+                break;
+            }
+
+            result.add(ngram);
+            count++;
+        }
+
+        return result;
     }
 
     public enum Mode {
@@ -359,12 +305,12 @@ public class NgramUtils {
         /**
          * Create prefix (i.e. those starting with the 1st character) ngrams only.
          */
-        PREFIX_ONLY,
+        PREFIX,
 
         /**
          * Create infix (i.e. those starting with the 2nd character) ngrams only.
          */
-        INFIX_ONLY
+        INFIX
 
     }
 
@@ -485,358 +431,354 @@ public class NgramUtils {
          * Maps many (but not all) irregular English forms to their base lemmas, such as 'be' for 'was'. This covers the
          * gaps that standard algorithmic stemmers (like Postgres Snowball) miss.
          */
-        private static final Map<String, String> IRREGULARS;
+        private static final Map<String, String> IRREGULARS = HashMap.newHashMap(350);
 
         static {
-            Map<String, String> map = new HashMap<>();
-
             // ==========================================
             // IRREGULAR VERBS (Past / Participle / 3rd Person -> Infinitive)
             // ==========================================
             // Be
-            map.put("was", "be");
-            map.put("were", "be");
-            map.put("am", "be");
-            map.put("is", "be");
-            map.put("are", "be");
-            map.put("been", "be");
+            IRREGULARS.put("was", "be");
+            IRREGULARS.put("were", "be");
+            IRREGULARS.put("am", "be");
+            IRREGULARS.put("is", "be");
+            IRREGULARS.put("are", "be");
+            IRREGULARS.put("been", "be");
             // Have
-            map.put("had", "have");
-            map.put("has", "have");
+            IRREGULARS.put("had", "have");
+            IRREGULARS.put("has", "have");
             // Do
-            map.put("did", "do");
-            map.put("does", "do");
-            map.put("done", "do");
+            IRREGULARS.put("did", "do");
+            IRREGULARS.put("does", "do");
+            IRREGULARS.put("done", "do");
             // Go
-            map.put("went", "go");
-            map.put("gone", "go");
-            map.put("goes", "go");
+            IRREGULARS.put("went", "go");
+            IRREGULARS.put("gone", "go");
+            IRREGULARS.put("goes", "go");
             // Common irregulars
-            map.put("ran", "run");
-            map.put("runs", "run");
-            map.put("ate", "eat");
-            map.put("eaten", "eat");
-            map.put("eats", "eat");
-            map.put("saw", "see");
-            map.put("seen", "see");
-            map.put("sees", "see");
-            map.put("came", "come");
-            map.put("comes", "come");
-            map.put("took", "take");
-            map.put("taken", "take");
-            map.put("takes", "take");
-            map.put("made", "make");
-            map.put("makes", "make");
-            map.put("gave", "give");
-            map.put("given", "give");
-            map.put("gives", "give");
-            map.put("knew", "know");
-            map.put("known", "know");
-            map.put("knows", "know");
-            map.put("got", "get");
-            map.put("gotten", "get");
-            map.put("gets", "get");
-            map.put("found", "find");
-            map.put("finds", "find");
-            map.put("thought", "think");
-            map.put("thinks", "think");
-            map.put("told", "tell");
-            map.put("tells", "tell");
-            map.put("became", "become");
-            map.put("becomes", "become");
-            map.put("left", "leave");
-            map.put("leaves", "leave"); // "leaves" as noun handled below
-            map.put("felt", "feel");
-            map.put("feels", "feel");
-            map.put("brought", "bring");
-            map.put("brings", "bring");
-            map.put("began", "begin");
-            map.put("begun", "begin");
-            map.put("begins", "begin");
-            map.put("kept", "keep");
-            map.put("keeps", "keep");
-            map.put("held", "hold");
-            map.put("holds", "hold");
-            map.put("wrote", "write");
-            map.put("written", "write");
-            map.put("writes", "write");
-            map.put("stood", "stand");
-            map.put("stands", "stand");
-            map.put("heard", "hear");
-            map.put("hears", "hear");
-            map.put("meant", "mean");
-            map.put("means", "mean");
-            map.put("set", "set");
-            map.put("sets", "set");
-            map.put("met", "meet");
-            map.put("meets", "meet");
-            map.put("paid", "pay");
-            map.put("pays", "pay");
-            map.put("sat", "sit");
-            map.put("sits", "sit");
-            map.put("spoke", "speak");
-            map.put("spoken", "speak");
-            map.put("speaks", "speak");
-            map.put("led", "lead");
-            map.put("leads", "lead"); // "lead" as noun handled below
-            map.put("read", "read");
-            map.put("reads", "read");
-            map.put("grew", "grow");
-            map.put("grown", "grow");
-            map.put("grows", "grow");
-            map.put("lost", "lose");
-            map.put("loses", "lose");
-            map.put("fell", "fall");
-            map.put("fallen", "fall");
-            map.put("falls", "fall");
-            map.put("sent", "send");
-            map.put("sends", "send");
-            map.put("built", "build");
-            map.put("builds", "build");
-            map.put("understood", "understand");
-            map.put("understands", "understand");
-            map.put("cut", "cut");
-            map.put("cuts", "cut");
-            map.put("put", "put");
-            map.put("puts", "put");
-            map.put("hit", "hit");
-            map.put("hits", "hit");
-            map.put("bought", "buy");
-            map.put("buys", "buy");
-            map.put("caught", "catch");
-            map.put("catches", "catch");
-            map.put("drew", "draw");
-            map.put("drawn", "draw");
-            map.put("draws", "draw");
-            map.put("drove", "drive");
-            map.put("driven", "drive");
-            map.put("drives", "drive");
-            map.put("broke", "break");
-            map.put("broken", "break");
-            map.put("breaks", "break");
-            map.put("chose", "choose");
-            map.put("chosen", "choose");
-            map.put("chooses", "choose");
-            map.put("drank", "drink");
-            map.put("drunk", "drink");
-            map.put("drinks", "drink");
-            map.put("flew", "fly");
-            map.put("flown", "fly");
-            map.put("flies", "fly");
-            map.put("swam", "swim");
-            map.put("swum", "swim");
-            map.put("swims", "swim");
-            map.put("rang", "ring");
-            map.put("rung", "ring");
-            map.put("rings", "ring");
-            map.put("sang", "sing");
-            map.put("sung", "sing");
-            map.put("sings", "sing");
-            map.put("sank", "sink");
-            map.put("sunk", "sink");
-            map.put("sinks", "sink");
-            map.put("shook", "shake");
-            map.put("shaken", "shake");
-            map.put("shakes", "shake");
-            map.put("stole", "steal");
-            map.put("stolen", "steal");
-            map.put("steals", "steal");
-            map.put("swore", "swear");
-            map.put("sworn", "swear");
-            map.put("swears", "swear");
-            map.put("threw", "throw");
-            map.put("thrown", "throw");
-            map.put("throws", "throw");
-            map.put("wore", "wear");
-            map.put("worn", "wear");
-            map.put("wears", "wear");
-            map.put("bit", "bite");
-            map.put("bitten", "bite");
-            map.put("bites", "bite");
-            map.put("hid", "hide");
-            map.put("hidden", "hide");
-            map.put("hides", "hide");
-            map.put("froze", "freeze");
-            map.put("frozen", "freeze");
-            map.put("freezes", "freeze");
-            map.put("rose", "rise");
-            map.put("risen", "rise");
-            map.put("rises", "rise");
-            map.put("woke", "wake");
-            map.put("woken", "wake");
-            map.put("wakes", "wake");
-            map.put("wove", "weave");
-            map.put("woven", "weave");
-            map.put("weaves", "weave");
-            map.put("tore", "tear");
-            map.put("torn", "tear");
-            map.put("tears", "tear");
-            map.put("shrank", "shrink");
-            map.put("shrunk", "shrink");
-            map.put("shrinks", "shrink");
-            map.put("struck", "strike");
-            map.put("strikes", "strike");
-            map.put("sought", "seek");
-            map.put("seeks", "seek");
-            map.put("fought", "fight");
-            map.put("fights", "fight");
-            map.put("bound", "bind");
-            map.put("binds", "bind");
-            map.put("ground", "grind");
-            map.put("grinds", "grind");
-            map.put("wound", "wind");
-            map.put("winds", "wind");
-            map.put("spun", "spin");
-            map.put("spins", "spin");
-            map.put("clung", "cling");
-            map.put("clings", "cling");
-            map.put("stung", "sting");
-            map.put("stings", "sting");
+            IRREGULARS.put("ran", "run");
+            IRREGULARS.put("runs", "run");
+            IRREGULARS.put("ate", "eat");
+            IRREGULARS.put("eaten", "eat");
+            IRREGULARS.put("eats", "eat");
+            IRREGULARS.put("saw", "see");
+            IRREGULARS.put("seen", "see");
+            IRREGULARS.put("sees", "see");
+            IRREGULARS.put("came", "come");
+            IRREGULARS.put("comes", "come");
+            IRREGULARS.put("took", "take");
+            IRREGULARS.put("taken", "take");
+            IRREGULARS.put("takes", "take");
+            IRREGULARS.put("made", "make");
+            IRREGULARS.put("makes", "make");
+            IRREGULARS.put("gave", "give");
+            IRREGULARS.put("given", "give");
+            IRREGULARS.put("gives", "give");
+            IRREGULARS.put("knew", "know");
+            IRREGULARS.put("known", "know");
+            IRREGULARS.put("knows", "know");
+            IRREGULARS.put("got", "get");
+            IRREGULARS.put("gotten", "get");
+            IRREGULARS.put("gets", "get");
+            IRREGULARS.put("found", "find");
+            IRREGULARS.put("finds", "find");
+            IRREGULARS.put("thought", "think");
+            IRREGULARS.put("thinks", "think");
+            IRREGULARS.put("told", "tell");
+            IRREGULARS.put("tells", "tell");
+            IRREGULARS.put("became", "become");
+            IRREGULARS.put("becomes", "become");
+            IRREGULARS.put("left", "leave");
+            IRREGULARS.put("leaves", "leave"); // "leaves" as noun handled below
+            IRREGULARS.put("felt", "feel");
+            IRREGULARS.put("feels", "feel");
+            IRREGULARS.put("brought", "bring");
+            IRREGULARS.put("brings", "bring");
+            IRREGULARS.put("began", "begin");
+            IRREGULARS.put("begun", "begin");
+            IRREGULARS.put("begins", "begin");
+            IRREGULARS.put("kept", "keep");
+            IRREGULARS.put("keeps", "keep");
+            IRREGULARS.put("held", "hold");
+            IRREGULARS.put("holds", "hold");
+            IRREGULARS.put("wrote", "write");
+            IRREGULARS.put("written", "write");
+            IRREGULARS.put("writes", "write");
+            IRREGULARS.put("stood", "stand");
+            IRREGULARS.put("stands", "stand");
+            IRREGULARS.put("heard", "hear");
+            IRREGULARS.put("hears", "hear");
+            IRREGULARS.put("meant", "mean");
+            IRREGULARS.put("means", "mean");
+            IRREGULARS.put("set", "set");
+            IRREGULARS.put("sets", "set");
+            IRREGULARS.put("met", "meet");
+            IRREGULARS.put("meets", "meet");
+            IRREGULARS.put("paid", "pay");
+            IRREGULARS.put("pays", "pay");
+            IRREGULARS.put("sat", "sit");
+            IRREGULARS.put("sits", "sit");
+            IRREGULARS.put("spoke", "speak");
+            IRREGULARS.put("spoken", "speak");
+            IRREGULARS.put("speaks", "speak");
+            IRREGULARS.put("led", "lead");
+            IRREGULARS.put("leads", "lead"); // "lead" as noun handled below
+            IRREGULARS.put("read", "read");
+            IRREGULARS.put("reads", "read");
+            IRREGULARS.put("grew", "grow");
+            IRREGULARS.put("grown", "grow");
+            IRREGULARS.put("grows", "grow");
+            IRREGULARS.put("lost", "lose");
+            IRREGULARS.put("loses", "lose");
+            IRREGULARS.put("fell", "fall");
+            IRREGULARS.put("fallen", "fall");
+            IRREGULARS.put("falls", "fall");
+            IRREGULARS.put("sent", "send");
+            IRREGULARS.put("sends", "send");
+            IRREGULARS.put("built", "build");
+            IRREGULARS.put("builds", "build");
+            IRREGULARS.put("understood", "understand");
+            IRREGULARS.put("understands", "understand");
+            IRREGULARS.put("cut", "cut");
+            IRREGULARS.put("cuts", "cut");
+            IRREGULARS.put("put", "put");
+            IRREGULARS.put("puts", "put");
+            IRREGULARS.put("hit", "hit");
+            IRREGULARS.put("hits", "hit");
+            IRREGULARS.put("bought", "buy");
+            IRREGULARS.put("buys", "buy");
+            IRREGULARS.put("caught", "catch");
+            IRREGULARS.put("catches", "catch");
+            IRREGULARS.put("drew", "draw");
+            IRREGULARS.put("drawn", "draw");
+            IRREGULARS.put("draws", "draw");
+            IRREGULARS.put("drove", "drive");
+            IRREGULARS.put("driven", "drive");
+            IRREGULARS.put("drives", "drive");
+            IRREGULARS.put("broke", "break");
+            IRREGULARS.put("broken", "break");
+            IRREGULARS.put("breaks", "break");
+            IRREGULARS.put("chose", "choose");
+            IRREGULARS.put("chosen", "choose");
+            IRREGULARS.put("chooses", "choose");
+            IRREGULARS.put("drank", "drink");
+            IRREGULARS.put("drunk", "drink");
+            IRREGULARS.put("drinks", "drink");
+            IRREGULARS.put("flew", "fly");
+            IRREGULARS.put("flown", "fly");
+            IRREGULARS.put("flies", "fly");
+            IRREGULARS.put("swam", "swim");
+            IRREGULARS.put("swum", "swim");
+            IRREGULARS.put("swims", "swim");
+            IRREGULARS.put("rang", "ring");
+            IRREGULARS.put("rung", "ring");
+            IRREGULARS.put("rings", "ring");
+            IRREGULARS.put("sang", "sing");
+            IRREGULARS.put("sung", "sing");
+            IRREGULARS.put("sings", "sing");
+            IRREGULARS.put("sank", "sink");
+            IRREGULARS.put("sunk", "sink");
+            IRREGULARS.put("sinks", "sink");
+            IRREGULARS.put("shook", "shake");
+            IRREGULARS.put("shaken", "shake");
+            IRREGULARS.put("shakes", "shake");
+            IRREGULARS.put("stole", "steal");
+            IRREGULARS.put("stolen", "steal");
+            IRREGULARS.put("steals", "steal");
+            IRREGULARS.put("swore", "swear");
+            IRREGULARS.put("sworn", "swear");
+            IRREGULARS.put("swears", "swear");
+            IRREGULARS.put("threw", "throw");
+            IRREGULARS.put("thrown", "throw");
+            IRREGULARS.put("throws", "throw");
+            IRREGULARS.put("wore", "wear");
+            IRREGULARS.put("worn", "wear");
+            IRREGULARS.put("wears", "wear");
+            IRREGULARS.put("bit", "bite");
+            IRREGULARS.put("bitten", "bite");
+            IRREGULARS.put("bites", "bite");
+            IRREGULARS.put("hid", "hide");
+            IRREGULARS.put("hidden", "hide");
+            IRREGULARS.put("hides", "hide");
+            IRREGULARS.put("froze", "freeze");
+            IRREGULARS.put("frozen", "freeze");
+            IRREGULARS.put("freezes", "freeze");
+            IRREGULARS.put("rose", "rise");
+            IRREGULARS.put("risen", "rise");
+            IRREGULARS.put("rises", "rise");
+            IRREGULARS.put("woke", "wake");
+            IRREGULARS.put("woken", "wake");
+            IRREGULARS.put("wakes", "wake");
+            IRREGULARS.put("wove", "weave");
+            IRREGULARS.put("woven", "weave");
+            IRREGULARS.put("weaves", "weave");
+            IRREGULARS.put("tore", "tear");
+            IRREGULARS.put("torn", "tear");
+            IRREGULARS.put("tears", "tear");
+            IRREGULARS.put("shrank", "shrink");
+            IRREGULARS.put("shrunk", "shrink");
+            IRREGULARS.put("shrinks", "shrink");
+            IRREGULARS.put("struck", "strike");
+            IRREGULARS.put("strikes", "strike");
+            IRREGULARS.put("sought", "seek");
+            IRREGULARS.put("seeks", "seek");
+            IRREGULARS.put("fought", "fight");
+            IRREGULARS.put("fights", "fight");
+            IRREGULARS.put("bound", "bind");
+            IRREGULARS.put("binds", "bind");
+            IRREGULARS.put("ground", "grind");
+            IRREGULARS.put("grinds", "grind");
+            IRREGULARS.put("wound", "wind");
+            IRREGULARS.put("winds", "wind");
+            IRREGULARS.put("spun", "spin");
+            IRREGULARS.put("spins", "spin");
+            IRREGULARS.put("clung", "cling");
+            IRREGULARS.put("clings", "cling");
+            IRREGULARS.put("stung", "sting");
+            IRREGULARS.put("stings", "sting");
 
-            map.put("swung", "swing");
-            map.put("swings", "swing");
-            map.put("wrung", "wring");
-            map.put("wrings", "wring");
-            map.put("slung", "sling");
-            map.put("slings", "sling");
-            map.put("stuck", "stick");
-            map.put("sticks", "stick");
-            map.put("dealt", "deal");
-            map.put("deals", "deal");
-            map.put("knelt", "kneel");
-            map.put("kneels", "kneel");
-            map.put("leant", "lean");
-            map.put("leans", "lean");
-            map.put("leapt", "leap");
-            map.put("leaps", "leap");
-            map.put("crept", "creep");
-            map.put("creeps", "creep");
-            map.put("wept", "weep");
-            map.put("weeps", "weep");
-            map.put("slept", "sleep");
-            map.put("sleeps", "sleep");
-            map.put("swept", "sweep");
-            map.put("sweeps", "sweep");
-            map.put("fed", "feed");
-            map.put("feeds", "feed");
-            map.put("bred", "breed");
-            map.put("breeds", "breed");
-            map.put("bled", "bleed");
-            map.put("bleeds", "bleed");
-            map.put("fled", "flee");
-            map.put("flees", "flee");
-            map.put("sped", "speed");
-            map.put("speeds", "speed");
-            map.put("shed", "shed");
-            map.put("sheds", "shed");
-            map.put("spread", "spread");
-            map.put("spreads", "spread");
-            map.put("bet", "bet");
-            map.put("bets", "bet");
-            map.put("cast", "cast");
-            map.put("casts", "cast");
-            map.put("cost", "cost");
-            map.put("costs", "cost");
-            map.put("shut", "shut");
-            map.put("shuts", "shut");
-            map.put("split", "split");
-            map.put("splits", "split");
-            map.put("let", "let");
-            map.put("lets", "let");
-            map.put("burst", "burst");
-            map.put("bursts", "burst");
-            map.put("hung", "hang");
-            map.put("hangs", "hang");
-            map.put("spat", "spit");
-            map.put("spits", "spit");
-            map.put("lit", "light");
-            map.put("lights", "light");
-            map.put("bid", "bid");
-            map.put("bids", "bid");
+            IRREGULARS.put("swung", "swing");
+            IRREGULARS.put("swings", "swing");
+            IRREGULARS.put("wrung", "wring");
+            IRREGULARS.put("wrings", "wring");
+            IRREGULARS.put("slung", "sling");
+            IRREGULARS.put("slings", "sling");
+            IRREGULARS.put("stuck", "stick");
+            IRREGULARS.put("sticks", "stick");
+            IRREGULARS.put("dealt", "deal");
+            IRREGULARS.put("deals", "deal");
+            IRREGULARS.put("knelt", "kneel");
+            IRREGULARS.put("kneels", "kneel");
+            IRREGULARS.put("leant", "lean");
+            IRREGULARS.put("leans", "lean");
+            IRREGULARS.put("leapt", "leap");
+            IRREGULARS.put("leaps", "leap");
+            IRREGULARS.put("crept", "creep");
+            IRREGULARS.put("creeps", "creep");
+            IRREGULARS.put("wept", "weep");
+            IRREGULARS.put("weeps", "weep");
+            IRREGULARS.put("slept", "sleep");
+            IRREGULARS.put("sleeps", "sleep");
+            IRREGULARS.put("swept", "sweep");
+            IRREGULARS.put("sweeps", "sweep");
+            IRREGULARS.put("fed", "feed");
+            IRREGULARS.put("feeds", "feed");
+            IRREGULARS.put("bred", "breed");
+            IRREGULARS.put("breeds", "breed");
+            IRREGULARS.put("bled", "bleed");
+            IRREGULARS.put("bleeds", "bleed");
+            IRREGULARS.put("fled", "flee");
+            IRREGULARS.put("flees", "flee");
+            IRREGULARS.put("sped", "speed");
+            IRREGULARS.put("speeds", "speed");
+            IRREGULARS.put("shed", "shed");
+            IRREGULARS.put("sheds", "shed");
+            IRREGULARS.put("spread", "spread");
+            IRREGULARS.put("spreads", "spread");
+            IRREGULARS.put("bet", "bet");
+            IRREGULARS.put("bets", "bet");
+            IRREGULARS.put("cast", "cast");
+            IRREGULARS.put("casts", "cast");
+            IRREGULARS.put("cost", "cost");
+            IRREGULARS.put("costs", "cost");
+            IRREGULARS.put("shut", "shut");
+            IRREGULARS.put("shuts", "shut");
+            IRREGULARS.put("split", "split");
+            IRREGULARS.put("splits", "split");
+            IRREGULARS.put("let", "let");
+            IRREGULARS.put("lets", "let");
+            IRREGULARS.put("burst", "burst");
+            IRREGULARS.put("bursts", "burst");
+            IRREGULARS.put("hung", "hang");
+            IRREGULARS.put("hangs", "hang");
+            IRREGULARS.put("spat", "spit");
+            IRREGULARS.put("spits", "spit");
+            IRREGULARS.put("lit", "light");
+            IRREGULARS.put("lights", "light");
+            IRREGULARS.put("bid", "bid");
+            IRREGULARS.put("bids", "bid");
 
             // ==========================================
             // IRREGULAR NOUNS (Plural -> Singular)
             // ==========================================
             // Vowel changes / Old English
-            map.put("men", "man");
-            map.put("women", "woman");
-            map.put("children", "child");
-            map.put("oxen", "ox");
-            map.put("feet", "foot");
-            map.put("geese", "goose");
-            map.put("teeth", "tooth");
-            map.put("mice", "mouse");
-            map.put("lice", "louse");
-            map.put("brethren", "brother");
+            IRREGULARS.put("men", "man");
+            IRREGULARS.put("women", "woman");
+            IRREGULARS.put("children", "child");
+            IRREGULARS.put("oxen", "ox");
+            IRREGULARS.put("feet", "foot");
+            IRREGULARS.put("geese", "goose");
+            IRREGULARS.put("teeth", "tooth");
+            IRREGULARS.put("mice", "mouse");
+            IRREGULARS.put("lice", "louse");
+            IRREGULARS.put("brethren", "brother");
 
             // Latin/Greek origin plurals (Common in technical/academic search)
-            map.put("analyses", "analysis");
-            map.put("bases", "base"); // Also plural of basis, but base is a safer lemma for search
-            map.put("crises", "crisis");
-            map.put("diagnoses", "diagnosis");
-            map.put("hypotheses", "hypothesis");
-            map.put("oases", "oasis");
-            map.put("parentheses", "parenthesis");
-            map.put("theses", "thesis");
-            map.put("axes", "axis");
-            map.put("phenomena", "phenomenon");
-            map.put("criteria", "criterion");
-            map.put("data", "datum"); // Often treated as mass noun, but mathematically correct
-            map.put("media", "medium");
-            map.put("bacteria", "bacterium");
-            map.put("curricula", "curriculum");
-            map.put("memoranda", "memorandum");
-            map.put("strata", "stratum");
-            map.put("alumni", "alumnus");
-            map.put("cacti", "cactus"); // cactuses also valid, but cacti common
-            map.put("foci", "focus");
-            map.put("fungi", "fungus");
-            map.put("nuclei", "nucleus");
-            map.put("radii", "radius");
-            map.put("stimuli", "stimulus");
-            map.put("syllabi", "syllabus");
-            map.put("appendices", "appendix");
-            map.put("indices", "index"); // indexes also valid
-            map.put("matrices", "matrix");
-            map.put("vertices", "vertex");
-            map.put("bureaux", "bureau"); // bureaus also valid
-            map.put("plateaux", "plateau");
-            map.put("tableaux", "tableau");
+            IRREGULARS.put("analyses", "analysis");
+            IRREGULARS.put("bases", "base"); // Also plural of basis, but base is a safer lemma for search
+            IRREGULARS.put("crises", "crisis");
+            IRREGULARS.put("diagnoses", "diagnosis");
+            IRREGULARS.put("hypotheses", "hypothesis");
+            IRREGULARS.put("oases", "oasis");
+            IRREGULARS.put("parentheses", "parenthesis");
+            IRREGULARS.put("theses", "thesis");
+            IRREGULARS.put("axes", "axis");
+            IRREGULARS.put("phenomena", "phenomenon");
+            IRREGULARS.put("criteria", "criterion");
+            IRREGULARS.put("data", "datum"); // Often treated as mass noun, but mathematically correct
+            IRREGULARS.put("media", "medium");
+            IRREGULARS.put("bacteria", "bacterium");
+            IRREGULARS.put("curricula", "curriculum");
+            IRREGULARS.put("memoranda", "memorandum");
+            IRREGULARS.put("strata", "stratum");
+            IRREGULARS.put("alumni", "alumnus");
+            IRREGULARS.put("cacti", "cactus"); // cactuses also valid, but cacti common
+            IRREGULARS.put("foci", "focus");
+            IRREGULARS.put("fungi", "fungus");
+            IRREGULARS.put("nuclei", "nucleus");
+            IRREGULARS.put("radii", "radius");
+            IRREGULARS.put("stimuli", "stimulus");
+            IRREGULARS.put("syllabi", "syllabus");
+            IRREGULARS.put("appendices", "appendix");
+            IRREGULARS.put("indices", "index"); // indexes also valid
+            IRREGULARS.put("matrices", "matrix");
+            IRREGULARS.put("vertices", "vertex");
+            IRREGULARS.put("bureaux", "bureau"); // bureaus also valid
+            IRREGULARS.put("plateaux", "plateau");
+            IRREGULARS.put("tableaux", "tableau");
 
             // Unchanging / Zero Plurals (Search indexes benefit from explicit mapping here)
-            map.put("sheep", "sheep");
-            map.put("deer", "deer");
-            map.put("fish", "fish"); // fishes exists for species, but fish is primary
-            map.put("species", "species");
-            map.put("series", "series");
-            map.put("aircraft", "aircraft");
-            map.put("moose", "moose");
-            map.put("swine", "swine");
+            IRREGULARS.put("sheep", "sheep");
+            IRREGULARS.put("deer", "deer");
+            IRREGULARS.put("fish", "fish"); // fishes exists for species, but fish is primary
+            IRREGULARS.put("species", "species");
+            IRREGULARS.put("series", "series");
+            IRREGULARS.put("aircraft", "aircraft");
+            IRREGULARS.put("moose", "moose");
+            IRREGULARS.put("swine", "swine");
 
             // ==========================================
             // IRREGULAR ADJECTIVES (Comparative/Superlative -> Base)
             // ==========================================
-            map.put("better", "good");
-            map.put("best", "good");
-            map.put("worse", "bad");
-            map.put("worst", "bad");
-            map.put("less", "little");
-            map.put("least", "little");
-            map.put("further", "far");
-            map.put("farthest", "far");
-            map.put("furthest", "far");
-            map.put("elder", "old");
-            map.put("eldest", "old");
-            map.put("more", "much");
-            map.put("most", "much");
-
-            IRREGULARS = Map.copyOf(map);
+            IRREGULARS.put("better", "good");
+            IRREGULARS.put("best", "good");
+            IRREGULARS.put("worse", "bad");
+            IRREGULARS.put("worst", "bad");
+            IRREGULARS.put("less", "little");
+            IRREGULARS.put("least", "little");
+            IRREGULARS.put("further", "far");
+            IRREGULARS.put("farthest", "far");
+            IRREGULARS.put("furthest", "far");
+            IRREGULARS.put("elder", "old");
+            IRREGULARS.put("eldest", "old");
+            IRREGULARS.put("more", "much");
+            IRREGULARS.put("most", "much");
         }
 
         /**
          * Checks for common stop words, such as 'the', 'a'.
          *
-         * @param word must be non-blank in lowercase already, for speed reasons
+         * @param word must be non-blank and in lowercase already, for speed reasons
          * @return {@code true} if the word is a stop word
          */
         static boolean stopWord(String word) {

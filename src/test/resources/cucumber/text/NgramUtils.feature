@@ -6,15 +6,15 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
     When prefix ngrams are created
     Then output should be "<item1>", "<item2>", "<item3>", "<item4>"
     Examples:
-      | input | item1 | item2 | item3 | item4 | comments                    |
-      | TêSt  | tes   | test  |       |       |                             |
-      | tests | tes   | test  | tests |       |                             |
-      | KEPT  | kee   | keep  | kep   | kept  | the lemma is 'keep'         |
-      | feet  | fee   | feet  | foo   | foot  | the lemma is 'foot'         |
-      | was   |       |       |       |       | stop word - no grams at all |
-      | a     |       |       |       |       | stop word                   |
-      | it    |       |       |       |       | stop word                   |
-      | ran   | ran   | run   |       |       | irregular verb              |
+      | input  | item1 | item2 | item3 | item4 | comments              |
+      | TêSt   | tes   | test  |       |       |                       |
+      | tests  | tes   | test  | tests |       |                       |
+      | KEPT   | kep   | kept  | kee   | keep  | the lemma is 'keep'   |
+      | feet   | fee   | feet  | foo   | foot  | the lemma is 'foot'   |
+      | it was |       |       |       |       | stop words - no grams |
+      | a      |       |       |       |       | stop word             |
+      | it     |       |       |       |       | stop word             |
+      | ran    | ran   | run   |       |       | irregular verb        |
 
 
   Scenario Outline: Create infix ngrams (actually trigrams)

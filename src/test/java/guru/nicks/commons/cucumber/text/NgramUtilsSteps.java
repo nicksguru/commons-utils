@@ -18,13 +18,13 @@ public class NgramUtilsSteps {
     @When("prefix ngrams are created")
     public void prefixNgramsAreCreated() {
         textWorld.setOutput(new ArrayList<>(
-                NgramUtils.createNgrams(textWorld.getInput(), NgramUtils.Mode.PREFIX_ONLY, NgramSettings.INSTANCE)));
+                NgramUtils.createNgrams(textWorld.getInput(), NgramUtils.Mode.PREFIX, NgramSettings.INSTANCE)));
     }
 
     @When("infix ngrams are created")
     public void infixNgramsAreCreated() {
         textWorld.setOutput(new ArrayList<>(
-                NgramUtils.createNgrams(textWorld.getInput(), NgramUtils.Mode.INFIX_ONLY, NgramSettings.INSTANCE)));
+                NgramUtils.createNgrams(textWorld.getInput(), NgramUtils.Mode.INFIX, NgramSettings.INSTANCE)));
     }
 
     @When("prefix and infix ngrams are created")

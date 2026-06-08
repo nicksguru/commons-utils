@@ -1,4 +1,4 @@
-@utils #@disabled
+@utils
 Feature: NgramUtils (with accented characters reduced to their ASCII equivalents)
 
   Scenario Outline: Create 6-letter prefix ngrams with English morphology

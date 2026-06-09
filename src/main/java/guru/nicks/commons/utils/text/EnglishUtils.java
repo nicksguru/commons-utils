@@ -377,29 +377,40 @@ public class EnglishUtils {
     }
 
     /**
-     * Checks for common stop words, such as 'the', 'a', 'it'.
+     * Converts the English word to its base form, taking into account many irregular words. Common
+     * {@link #stopWord(String) stop words} are not filtered out, rather processed, e.g. 'was' → 'be'.
      *
-     * @param word must be non-blank and in lowercase already, for speed reasons
-     * @return {@code true} if the word is a stop word
+     * @param word (will be converted to lowercase, and punctuation removed)
+     * @return lemma, or the original word if it wasn't recognized as an English word (e.g. has punctuation characters
+     *         or belongs to another language)
      */
-    public static boolean stopWord(String word) {
-        return STOP_WORDS.contains(word);
-    }
+    public static String getWordLemma(String word) {
+        if (StringUtils.isBlank(word)) {
+            return word;
+        }
 
-    /**
-     * Converts English words to their base forms, taking into account many irregular words. The common stop words are
-     * not filtered out, rather processed, e.g. 'was' becomes 'be'.
-     *
-     * @param word original word
-     * @return base word form (lemma)
-     */
-    public static String lemmatize(String word) {
+        word = word.strip().toLowerCase();
         String stem = RiTa.stem(word);
         String regular = IRREGULARS.get(stem);
 
         return StringUtils.isNotBlank(regular)
                 ? regular
                 : stem;
+    }
+
+    /**
+     * Checks for common stop words, such as 'the', 'a', 'it'.
+     *
+     * @param word will be converted to lowercase, and leading/trailing whitespaces removed
+     * @return {@code true} if the word is a stop word
+     */
+    public static boolean stopWord(String word) {
+        if (StringUtils.isBlank(word)) {
+            return false;
+        }
+
+        word = word.strip().toLowerCase();
+        return STOP_WORDS.contains(word);
     }
 
 }

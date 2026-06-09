@@ -20,7 +20,7 @@ public class EnglishUtilsSteps {
 
     @When("word is lemmatized")
     public void wordIsLemmatized() {
-        String lemma = EnglishUtils.lemmatize(textWorld.getInput());
+        String lemma = EnglishUtils.getWordLemma(textWorld.getInput());
         textWorld.setOutput(lemma);
     }
 

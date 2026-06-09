@@ -3,7 +3,6 @@ package guru.nicks.commons.utils.text;
 import lombok.experimental.UtilityClass;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.SequencedSet;
 import java.util.Set;
 
@@ -95,8 +94,7 @@ public class NgramUtils {
     }
 
     /**
-     * Creates ngrams for each unique word. Russian words are augmented with their singular 'lemmas' (morphologically
-     * analyzed forms, not just stems), for example: 'люди' ('humans') → 'человек' ('a human').
+     * Creates ngrams for each unique word.
      * <p>
      * WARNING: original words are part of the result only if the word length is within the ngram length limits and
      * {@code startEachWordOffset} is 0.
@@ -193,47 +191,35 @@ public class NgramUtils {
      * This method is light-weight, requires no dictionary, converts 'ran' to 'run', 'geese' to 'goose' and so on.
      * <p>
      * WARNING: the lemma is only processed if its length is within the ngram length and word offset limits. For
-     * example, 'was' becomes 'be' whose length (2) is smaller than the common minimum ngram length (3). In this case,
-     * this method returns an empty collection.s
+     * example, 'was' becomes 'be' whose length (2) is smaller than the common minimum ngram length (3). Also, the lemma
+     * is skipped if it is the same as the original word - because 'raw ngrams' do the same.
      *
      * @param word must be non-blank and in lowercase already, for speed reasons
      */
     private static void addEnglishMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
             int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
-        String lemma = EnglishUtils.lemmatize(word);
-        addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
-                minNgramLength, maxNgramLength, whereToAdd);
+        String lemma = EnglishUtils.getWordLemma(word);
+
+        if (!lemma.equals(word)) {
+            addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
+                    minNgramLength, maxNgramLength, whereToAdd);
+        }
     }
 
     /**
      * Performs morphology analysis for Russian and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
      * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, Set)}.
      * <p>
-     * This method only works if {@code com.github.demidko.aot.WordformMeaning} is available on the classpath. If the
-     * class is not available, returns an empty collection.
-     * <p>
      * WARNING: the lemma is only processed (split into ngrams) if its length is within the ngram length and word offset
-     * limits.
+     * limits. Also, if the lemma is the same as the original word, it is skipped - because 'raw ngrams' do the same.
      */
     private static void addRussianMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
             int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
-        // check if the optional AOT dependency is available on the classpath
-        try {
-            List<?> meanings = (List<?>) RussianUtils.getLookupForMeaningsMethod().invokeExact(word);
-            // empty for non-Russian words
-            if (meanings.isEmpty()) {
-                return;
-            }
+        String lemma = RussianUtils.getWordLemma(word);
 
-            for (Object meaning : meanings) {
-                Object lemma = RussianUtils.getGetLemmaMethod().invoke(meaning);
-                String lemmaString = lemma.toString();
-
-                addRawNgrams(lemmaString, startEachWordOffset, endEachWordOffset,
-                        minNgramLength, maxNgramLength, whereToAdd);
-            }
-        } catch (Throwable t) {
-            throw new IllegalStateException("Morphological analysis failed: " + t.getMessage(), t);
+        if (!lemma.equals(word)) {
+            addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
+                    minNgramLength, maxNgramLength, whereToAdd);
         }
     }
 

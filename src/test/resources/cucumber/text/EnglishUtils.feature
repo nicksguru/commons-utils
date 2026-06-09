@@ -74,6 +74,7 @@ Feature: EnglishUtils
     Examples:
       | input       | lemma      | comments                                |
       | was         | be         | past of be                              |
+      | was,        | was,       | unrecognized because of punctuation     |
       | were        | be         | past of be                              |
       | am          | be         | present of be                           |
       | is          | be         | present of be                           |

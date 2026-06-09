@@ -11,7 +11,6 @@ import lombok.SneakyThrows;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -38,11 +37,11 @@ public class RussianUtilsSteps {
         initializedField.setAccessible(true);
         initializedField.setBoolean(null, false);
 
-        Field lookupField = RussianUtils.class.getDeclaredField("lookupForMeanings");
+        Field lookupField = RussianUtils.class.getDeclaredField("lookupForMeaningsMethod");
         lookupField.setAccessible(true);
         lookupField.set(null, null);
 
-        Field getLemmaField = RussianUtils.class.getDeclaredField("getLemma");
+        Field getLemmaField = RussianUtils.class.getDeclaredField("getLemmaMethod");
         getLemmaField.setAccessible(true);
         getLemmaField.set(null, null);
     }
@@ -57,98 +56,13 @@ public class RussianUtilsSteps {
     }
 
     /**
-     * Requests the lookupForMeanings method handle from RussianUtils.
-     */
-    @When("lookupForMeanings method handle is requested")
-    public void lookupForMeaningsMethodHandleIsRequested() {
-        MethodHandle[] handle = new MethodHandle[1];
-        Throwable thrown = catchThrowable(() ->
-                handle[0] = RussianUtils.getLookupForMeaningsMethod());
-        textWorld.setLastException(thrown);
-
-        if (thrown == null) {
-            textWorld.setOutput(handle[0] != null ? "not null" : "null");
-        }
-    }
-
-    /**
-     * Requests the getLemma method handle from RussianUtils.
-     */
-    @When("getLemma method handle is requested")
-    public void getLemmaMethodHandleIsRequested() {
-        MethodHandle[] handle = new MethodHandle[1];
-        Throwable thrown = catchThrowable(() ->
-                handle[0] = RussianUtils.getGetLemmaMethod());
-        textWorld.setLastException(thrown);
-
-        if (thrown == null) {
-            textWorld.setOutput((handle[0] != null)
-                    ? "not null"
-                    : "null");
-        }
-    }
-
-    /**
-     * Requests the lookupForMeanings method handle twice to verify caching behavior.
-     */
-    @When("lookupForMeanings method handle is requested twice")
-    public void lookupForMeaningsMethodHandleIsRequestedTwice() {
-        MethodHandle[] first = new MethodHandle[1];
-        MethodHandle[] second = new MethodHandle[1];
-
-        Throwable thrown = catchThrowable(() -> {
-            first[0] = RussianUtils.getLookupForMeaningsMethod();
-            second[0] = RussianUtils.getLookupForMeaningsMethod();
-        });
-        textWorld.setLastException(thrown);
-
-        if (thrown == null) {
-            firstMethodHandle = first[0];
-            secondMethodHandle = second[0];
-        }
-    }
-
-    /**
-     * Requests the getLemma method handle twice to verify caching behavior.
-     */
-    @When("getLemma method handle is requested twice")
-    public void getLemmaMethodHandleIsRequestedTwice() {
-        MethodHandle[] first = new MethodHandle[1];
-        MethodHandle[] second = new MethodHandle[1];
-
-        Throwable thrown = catchThrowable(() -> {
-            first[0] = RussianUtils.getGetLemmaMethod();
-            second[0] = RussianUtils.getGetLemmaMethod();
-        });
-        textWorld.setLastException(thrown);
-
-        if (thrown == null) {
-            firstMethodHandle = first[0];
-            secondMethodHandle = second[0];
-        }
-    }
-
-    /**
      * Lemmatizes a Russian word using the AOT library method handles.
      */
     @When("Russian word {string} is lemmatized")
     public void russianWordIsLemmatized(String word) {
         Throwable thrown = catchThrowable(() -> {
-            MethodHandle lookupMethod = RussianUtils.getLookupForMeaningsMethod();
-            MethodHandle getLemmaMethod = RussianUtils.getGetLemmaMethod();
-
-            // Call lookupForMeanings to get meanings for the word
-            @SuppressWarnings("unchecked")
-            List<?> meanings = (List<?>) lookupMethod.invoke(word);
-
-            if (meanings != null && !meanings.isEmpty()) {
-                // Get the first meaning and extract its lemma
-                Object firstMeaning = meanings.getFirst();
-                Object lemma = getLemmaMethod.invoke(firstMeaning);
-                textWorld.setOutput(lemma != null ? lemma.toString() : "");
-            } else {
-                textWorld.setOutput("");
-            }
+            String lemma = RussianUtils.getWordLemma(word);
+            textWorld.setOutput(lemma);
         });
         textWorld.setLastException(thrown);
     }

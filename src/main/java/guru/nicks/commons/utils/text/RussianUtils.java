@@ -1,7 +1,9 @@
 package guru.nicks.commons.utils.text;
 
+import com.github.demidko.aot.WordformMeaning;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -28,44 +30,73 @@ public class RussianUtils {
     /**
      * Method handle for {@code WordformMeaning.lookupForMeanings(String)}.
      */
-    private static MethodHandle lookupForMeanings;
+    private static MethodHandle lookupForMeaningsMethod;
 
     /**
      * Method handle for {@code WordformMeaning.getLemma()}.
      */
-    private static MethodHandle getLemma;
+    private static MethodHandle getLemmaMethod;
 
     /**
-     * Gets the method handle for {@code WordformMeaning.lookupForMeanings(String)}. The method call returns an empty
-     * list for unknown words, for example for any non-Russian ones.
+     * Converts the Russian word to its base form, taking into irregular forms, such as 'люди' → 'человек'.
      *
-     * @return method handle
-     * @throws IllegalStateException method not available
+     * @param word will be converted to lowercase, and leading/trailing whitespaces removed
+     * @return lemma, or the original word if it wasn't recognized as a Russian word (e.g. has punctuation characters or
+     *         belongs to another language)
+     * @throws IllegalStateException analysis not available
      */
-    public static MethodHandle getLookupForMeaningsMethod() {
+    public static String getWordLemma(String word) {
         initializeMethodHandlesOnce();
 
-        if (lookupForMeanings == null) {
-            throw new IllegalStateException("Failed to initialize morphology handles");
+        if (getLemmaMethod == null) {
+            throw new IllegalStateException("Failed to initialize morphology methods");
         }
 
-        return lookupForMeanings;
+        if (StringUtils.isBlank(word)) {
+            return word;
+        }
+
+        try {
+            word = word.strip().toLowerCase();
+            List<WordformMeaning> meanings = findWordMeanings(word);
+
+            if (meanings.isEmpty()) {
+                return word;
+            }
+
+            // lemmatize the first meaning
+            WordformMeaning lemmaMeaning = (WordformMeaning) getLemmaMethod.invoke(meanings.getFirst());
+            return lemmaMeaning.toString();
+        } catch (Throwable t) {
+            throw new IllegalStateException("Morphological analysis failed: " + t.getMessage(), t);
+        }
     }
 
     /**
-     * Gets the method handle for {@code WordformMeaning.getLemma()}.
+     * Looks up word meanings. Returns an empty list for unknown words, for example for any non-Russian ones.
      *
-     * @return method handle
-     * @throws IllegalStateException method not available
+     * @param word will be converted to lowercase, and leading/trailing whitespaces removed
+     * @return morphological meanings of the word
+     * @throws IllegalStateException analysis not available
      */
-    public static MethodHandle getGetLemmaMethod() {
+    public static List<WordformMeaning> findWordMeanings(String word) {
         initializeMethodHandlesOnce();
 
-        if (getLemma == null) {
-            throw new IllegalStateException("Failed to initialize morphology handles");
+        if (lookupForMeaningsMethod == null) {
+            throw new IllegalStateException("Failed to initialize morphology methods");
         }
 
-        return getLemma;
+        if (StringUtils.isBlank(word)) {
+            return List.of();
+        }
+
+        word = word.strip().toLowerCase();
+
+        try {
+            return (List<WordformMeaning>) lookupForMeaningsMethod.invoke(word);
+        } catch (Throwable t) {
+            throw new IllegalStateException("Morphological analysis failed: " + t.getMessage(), t);
+        }
     }
 
     /**
@@ -84,22 +115,19 @@ public class RussianUtils {
             }
 
             try {
-                Class<?> wordformMeaningClass = Class.forName("com.github.demidko.aot.WordformMeaning");
-                var lookup = MethodHandles.lookup();
+                Class<?> clazz = Class.forName("com.github.demidko.aot.WordformMeaning");
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
 
                 // create method handle for static method: 'List WordformMeaning.lookupForMeanings(String)'
-                lookupForMeanings = lookup.findStatic(wordformMeaningClass, "lookupForMeanings",
+                lookupForMeaningsMethod = lookup.findStatic(clazz, "lookupForMeanings",
                         MethodType.methodType(List.class, String.class));
 
                 // create method handle for virtual method: 'WordformMeaning getLemma()'
-                getLemma = lookup.findVirtual(wordformMeaningClass, "getLemma",
-                        MethodType.methodType(Class.forName("com.github.demidko.aot.WordformMeaning")));
+                getLemmaMethod = lookup.findVirtual(clazz, "getLemma", MethodType.methodType(clazz));
                 initializedOrFailed = true;
-
             } catch (Exception e) {
                 initializedOrFailed = true;
-                throw new IllegalStateException("Failed to initialize Russian morphology handles: " + e.getMessage(),
-                        e);
+                throw new IllegalStateException("Failed to initialize morphology methods: " + e.getMessage(), e);
             }
         }
     }

@@ -42,6 +42,6 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
     Examples:
       | input   | item1 | item2 | item3 | item4  | item5 | item6  | comments                                 |
       | люДИ    | люд   | люди  | чел   | чело   | челов | челове | singular differs from plural drastically |
-      | ТЕст    | тес   | тест  | тесто |        |       |        | analyser mismatches 'тест' for 'тесто'   |
+      | ТЕсты   | тес   | тест  | тесты |        |       |        |                                          |
       | словАми | сло   | слов  | слова | словам | слово |        | different vowel in item5 (lemma)         |
       | Ёлка    | елк   | елка  |       |        |       |        | ё -> е                                   |

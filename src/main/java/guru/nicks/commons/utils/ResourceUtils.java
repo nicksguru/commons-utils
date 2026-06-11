@@ -76,9 +76,10 @@ public class ResourceUtils {
             .build();
 
     /**
-     * @see #getAppBuildTag()
+     * Cache for build tag - computed once and never expires. The reason to not use atomics is that they don't have a
+     * mechanism to guarantee that the Lambda computing a value is run only once.
      */
-    private static String cachedBuildTag = null;
+    private static final Cache<String, String> BUILD_TAG_CACHE = Caffeine.newBuilder().maximumSize(1).build();
 
     /**
      * Loads all files from the given directory (presumably inside JAR) - but not from subdirectories - to in-memory
@@ -219,17 +220,8 @@ public class ResourceUtils {
      *
      * @return build tag; to use it as part of filenames or URLs, make sure to transform it to e.g. Sha256-hex
      */
-    @Synchronized
     public static String getAppBuildTag() {
-        if (cachedBuildTag != null) {
-            return cachedBuildTag;
-        }
-
-        synchronized (ResourceUtils.class) {
-            if (cachedBuildTag != null) {
-                return cachedBuildTag;
-            }
-
+        return BUILD_TAG_CACHE.get("THE_ONLY_KEY", key -> {
             String newTag = null;
 
             try {
@@ -260,9 +252,8 @@ public class ResourceUtils {
                 newTag = Instant.now().toString();
             }
 
-            cachedBuildTag = ChecksumUtils.computeJsonChecksum(newTag);
-            return cachedBuildTag;
-        }
+            return ChecksumUtils.computeJsonChecksum(newTag);
+        });
     }
 
     /**

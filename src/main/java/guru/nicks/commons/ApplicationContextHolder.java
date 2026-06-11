@@ -2,6 +2,7 @@ package guru.nicks.commons;
 
 import guru.nicks.commons.listener.ApplicationContextHolderListener;
 
+import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -50,10 +51,9 @@ public class ApplicationContextHolder {
                         + "]"));
     }
 
-    public static void setApplicationContext(ApplicationContext applicationContext) {
+    public static void setApplicationContext(@Nullable ApplicationContext applicationContext) {
         ApplicationContextHolder.applicationContext = applicationContext;
-        log.info("Stored application context in [{}]: {}",
-                ApplicationContextHolder.class.getName(), applicationContext.getDisplayName());
+        log.info("Stored application context in [{}]", ApplicationContextHolder.class.getName());
     }
 
     /**

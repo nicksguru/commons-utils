@@ -41,6 +41,7 @@ public class JvmUtilsSteps {
         if (directMemoryAccessorMockedStatic != null) {
             directMemoryAccessorMockedStatic.close();
         }
+
         closeableMocks.close();
     }
 

@@ -1,5 +1,6 @@
 package guru.nicks.commons.validation;
 
+import guru.nicks.commons.encoder.CrockfordBase32FpeIdSupplier;
 import guru.nicks.commons.utils.text.TextUtils;
 
 import am.ik.yavi.meta.ConstraintArguments;
@@ -24,7 +25,7 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
  *         input - therefore all-zero strings are always considered invalid</li>
  *  </ul>
  *
- * @see #testWithException(String)
+ * @see CrockfordBase32FpeIdSupplier
  */
 public abstract class CrockfordBase32ChecksumValidator implements Predicate<String> {
 

@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  * matters: it goes to {@link FieldError#getCode()} which is then rendered to web app. Also, {@link #message()} is
  * rendered to REST caller.
  * <p>
- * NOTE: {@code null} values are considered valid, empty and all-whitespaces ones are not.
+ * NOTE: {@code null} values are considered valid.
  */
 @Constraint(validatedBy = InternationalPhoneNumberFormatValidator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER})

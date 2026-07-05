@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -21,13 +20,13 @@ import java.util.regex.Pattern;
 @UtilityClass
 public class TextUtils {
 
-    public static final Predicate<String> ALL_ZEROES_PREDICATE = Pattern.compile("^0+$").asMatchPredicate();
-
     /**
+     * Matches all possible whitespaces. For inclusion in '[]'-style regexps.
+     * <p>
      * WARNING: {@code javaSpaceChar} does not span '\r\n\t\v' ({@code javaWhitespace} does). But the latter does not
-     * span Unicode spaces, therefore these two should be combined.
+     * span Unicode spaces, therefore these two are combined.
      */
-    private static final String ANY_WHITESPACE = "\\p{javaSpaceChar}\\p{javaWhitespace}";
+    public static final String ANY_WHITESPACE = "\\p{javaSpaceChar}\\p{javaWhitespace}";
 
     /**
      * Pre-compiled (to avoid repetitive on the fly recompilation) regexp that matches '\r\n\t\v',
@@ -219,6 +218,28 @@ public class TextUtils {
         return (result == null)
                 ? "<???>"
                 : result;
+    }
+
+    /**
+     * Checks if the input string doesn't consist of '0' characters only. One of the reasons for checking this is that
+     * modulo-based check digit algorithms throw exception on all-zero input. Therefore, all-zero strings must not be
+     * fed to them.
+     *
+     * @return {@code true} if {@code value} is not all-zero, including null/blank
+     */
+    public static boolean notAllZeroes(@Nullable String value) {
+        if (value == null) {
+            return true;
+        }
+
+        // inlined for speed: early exit on first non-zero character
+        for (int i = 0, n = value.length(); i < n; i++) {
+            if (value.charAt(i) != '0') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

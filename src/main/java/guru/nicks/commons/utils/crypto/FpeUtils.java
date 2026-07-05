@@ -189,10 +189,10 @@ public class FpeUtils {
                 }
 
                 String paddedNextSeqValue = sequenceValuePadder.apply(nextSeqValue);
-
                 result = encryptorFunction.apply(paddedNextSeqValue);
+
                 prevSeqValue = nextSeqValue;
-            } while (TextUtils.ALL_ZEROES_PREDICATE.test(result));
+            } while (!TextUtils.notAllZeroes(result));
 
             return result;
         }

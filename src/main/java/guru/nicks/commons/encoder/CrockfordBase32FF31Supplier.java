@@ -4,8 +4,12 @@ import guru.nicks.commons.utils.crypto.FpeUtils;
 import guru.nicks.commons.utils.text.TextUtils;
 import guru.nicks.commons.validation.CrockfordBase32ChecksumValidator;
 
+import am.ik.yavi.meta.ConstraintArguments;
+
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+
+import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
 /**
  * Generates Crockford's Base32-encoded FPE-encrypted (FF3-1) IDs using a combination of:
@@ -36,8 +40,10 @@ public abstract class CrockfordBase32FF31Supplier implements Supplier<String> {
      * Constructor. For arguments description see
      * {@link FpeUtils#createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
      */
+    @ConstraintArguments
     protected CrockfordBase32FF31Supplier(LongSupplier nextValueSupplier, int leftPadPositions,
             byte[] key, byte[] tweak) {
+        checkNotNull(nextValueSupplier, _CrockfordBase32FF31SupplierArgumentsMeta.NEXTVALUESUPPLIER.name());
         var base32Encoder = new CrockfordBase32SequenceEncoder();
 
         sequenceEncryptor = FpeUtils.createFf31SequenceEncryptor(

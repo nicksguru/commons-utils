@@ -148,7 +148,7 @@ public class FpeUtils {
             sequenceValuePadder = value -> StringUtils.leftPad(value, leftPadPositions, padCharacter);
 
             // store characters fast lookup in decimal2alphabet()
-            this.alphabetChars = alphabet.toCharArray();
+            alphabetChars = alphabet.toCharArray();
             // store character indexes for fast lookup in alphabet2decimal()
             alphabetIndexMap = IntStream.range(0, alphabet.length())
                     .boxed()

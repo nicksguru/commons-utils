@@ -1,13 +1,14 @@
 package guru.nicks.commons.encoder;
 
 import guru.nicks.commons.utils.crypto.FpeUtils;
+import guru.nicks.commons.utils.text.TextUtils;
 import guru.nicks.commons.validation.CrockfordBase32ChecksumValidator;
 
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 /**
- * Generates Crockford's Base32-encoded FPE-encrypted IDs using a combination of:
+ * Generates Crockford's Base32-encoded FPE-encrypted (FF3-1) IDs using a combination of:
  * <ul>
  *  <li>a sequence number (supplier passed to constructor)</li>
  *  <li>encryption (parameters passed to constructor)</li>
@@ -27,28 +28,21 @@ import java.util.function.Supplier;
  *
  * @see CrockfordBase32ChecksumValidator
  */
-public abstract class CrockfordBase32FpeIdSupplier implements Supplier<String> {
+public abstract class CrockfordBase32FF31Supplier implements Supplier<String> {
 
     private final FpeUtils.SequenceEncryptor sequenceEncryptor;
 
     /**
-     * Constructor.
-     *
-     * @param nextValueSupplier obtains next sequence value for ID
-     * @param leftPadPositions  number of positions to which the sequence value will be left-padded (FF1 requires at
-     *                          least a million variants for the input string, and since 10^6 = 1 000 000, this value
-     *                          must be at least 6 for the decimal alphabet and at least 4 for Base32 because 32^4 = 1
-     *                          048 576)
-     * @param key               encryption key
-     * @param tweak             tweak (like IV for AES)
+     * Constructor. For arguments description see
+     * {@link FpeUtils#createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
      */
-    protected CrockfordBase32FpeIdSupplier(LongSupplier nextValueSupplier, int leftPadPositions,
+    protected CrockfordBase32FF31Supplier(LongSupplier nextValueSupplier, int leftPadPositions,
             byte[] key, byte[] tweak) {
         var base32Encoder = new CrockfordBase32SequenceEncoder();
 
-        sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(
+        sequenceEncryptor = FpeUtils.createFf31SequenceEncryptor(
                 () -> base32Encoder.encode(nextValueSupplier.getAsLong()),
-                CrockfordBase32ChecksumValidator.ALPHABET,
+                TextUtils.CROCKFORD_BASE32_ALPHABET,
                 leftPadPositions, '0',
                 key, tweak);
     }

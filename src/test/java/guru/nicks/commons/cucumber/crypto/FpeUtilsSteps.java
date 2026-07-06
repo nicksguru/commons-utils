@@ -46,11 +46,11 @@ public class FpeUtilsSteps {
         closeableMocks.close();
     }
 
-    @Given("an FF1 sequence encryptor is created with key {string}, tweak {string}, alphabet {string}, and padding to {int} positions")
-    public void anFf1SequenceEncryptorIsCreatedWithKeyTweakAndPaddingOfDigits(String key, String tweak,
+    @Given("an FF31 sequence encryptor is created with key {string}, tweak {string}, alphabet {string}, and padding to {int} positions")
+    public void anFf31SequenceEncryptorIsCreatedWithKeyTweakAndPaddingOfDigits(String key, String tweak,
             String alphabet, int padding) {
         textWorld.setLastException(catchThrowable(() ->
-                sequenceEncryptor = FpeUtils.createFf1SequenceEncryptor(nextValueSupplier,
+                sequenceEncryptor = FpeUtils.createFf31SequenceEncryptor(nextValueSupplier,
                         alphabet,
                         padding,
                         // pad with the first character of the alphabet
@@ -76,6 +76,8 @@ public class FpeUtilsSteps {
     public void theNextEncryptedValueIsRequested() {
         var throwable = catchThrowable(() ->
                 encryptedValue = sequenceEncryptor.getNextEncrypted());
+
+
         textWorld.setLastException(throwable);
     }
 

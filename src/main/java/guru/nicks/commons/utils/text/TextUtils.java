@@ -1,5 +1,7 @@
 package guru.nicks.commons.utils.text;
 
+import guru.nicks.commons.utils.crypto.FpeUtils;
+
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -19,6 +22,16 @@ import java.util.regex.Pattern;
  */
 @UtilityClass
 public class TextUtils {
+
+    /**
+     * For use e.g. in {@link FpeUtils#createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
+     */
+    public static final String DECIMAL_ALPHABET = "0123456789";
+
+    /**
+     * Crockford's Base32 character set.
+     */
+    public static final String CROCKFORD_BASE32_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 
     /**
      * Matches all possible whitespaces. For inclusion in '[]'-style regexps.

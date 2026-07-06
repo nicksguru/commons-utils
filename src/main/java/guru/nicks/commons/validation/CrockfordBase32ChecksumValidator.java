@@ -1,6 +1,5 @@
 package guru.nicks.commons.validation;
 
-import guru.nicks.commons.encoder.CrockfordBase32FpeIdSupplier;
 import guru.nicks.commons.utils.text.TextUtils;
 
 import am.ik.yavi.meta.ConstraintArguments;
@@ -19,20 +18,13 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
  *     <li>min. length (passed to constructor)</li>
  *     <li>max. length ({@link #MAX_TOTAL_LENGTH} resulting from encoding {@link Long#MAX_VALUE} and appending a
  *         check digit)</li>
- *     <li>payload content ({@link #ALPHABET})</li>
+ *     <li>payload content ({@link TextUtils#CROCKFORD_BASE32_ALPHABET})</li>
  *     <li>check digit calculated using the ISIN algorithm (possibly altered by
  *         {@link #convertCheckDigitToIndexInAlphabet(int)}) which, like all module-based ones, fails on all-zero
  *         input - therefore all-zero strings are always considered invalid</li>
  *  </ul>
- *
- * @see CrockfordBase32FpeIdSupplier
  */
 public abstract class CrockfordBase32ChecksumValidator implements Predicate<String> {
-
-    /**
-     * Crockford's Base32 character set.
-     */
-    public static final String ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 
     /**
      * {@link Long#MAX_VALUE} is encoded as {@code 7zzzzzzzzzzzz} - 13 characters.
@@ -51,14 +43,14 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
 
     /**
      * Boolean array for O(1) character validation. Each index represents a character's ASCII value (0..127): true =
-     * valid character in {@link #ALPHABET}, false = invalid.
+     * valid character in {@link TextUtils#CROCKFORD_BASE32_ALPHABET}, false = invalid.
      *
      * @see #conformsToAlphabet(String)
      */
     private static final boolean[] IS_VALID_ALPHABET_CHAR = new boolean[128];
 
     static {
-        for (char c : ALPHABET.toCharArray()) {
+        for (char c : TextUtils.CROCKFORD_BASE32_ALPHABET.toCharArray()) {
             IS_VALID_ALPHABET_CHAR[c] = true;
         }
     }
@@ -76,7 +68,7 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
 
         // sanity check
         check(CHECKSUM_LENGTH, "checksum length").eq(1);
-        check(ALPHABET, "alphabet")
+        check(TextUtils.CROCKFORD_BASE32_ALPHABET, "alphabet")
                 .lengthBetweenInclusive(32, 32)
                 .constraint(it -> it.chars().distinct().count() == it.length(), "must not contain duplicates");
     }
@@ -116,7 +108,7 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
      * Post-processes the check digit if needed.
      *
      * @param checkDigit check digit (0..9)
-     * @return index in {@link #ALPHABET}
+     * @return index in {@link TextUtils#CROCKFORD_BASE32_ALPHABET}
      */
     protected abstract int convertCheckDigitToIndexInAlphabet(int checkDigit);
 
@@ -159,11 +151,11 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
     }
 
     /**
-     * Calculates an ISIN check digit, then maps it onto {@link #ALPHABET} with
+     * Calculates an ISIN check digit, then maps it onto {@link TextUtils#CROCKFORD_BASE32_ALPHABET} with
      * {@link #convertCheckDigitToIndexInAlphabet(int)}.
      *
      * @param value input string
-     * @return check digit, belongs to {@link #ALPHABET}
+     * @return check digit, belongs to {@link TextUtils#CROCKFORD_BASE32_ALPHABET}
      * @throws IllegalStateException check digit calculation error
      */
     private char calculateCheckDigit(String value) {
@@ -183,7 +175,7 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
         }
 
         int indexInAlphabet = convertCheckDigitToIndexInAlphabet(checkDigit);
-        return ALPHABET.charAt(indexInAlphabet);
+        return TextUtils.CROCKFORD_BASE32_ALPHABET.charAt(indexInAlphabet);
     }
 
 }

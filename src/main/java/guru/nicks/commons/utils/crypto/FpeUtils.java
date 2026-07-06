@@ -5,7 +5,9 @@ import guru.nicks.commons.utils.text.TextUtils;
 import am.ik.yavi.meta.ConstraintArguments;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.crypto.fpe.FPEEngine;
 import org.bouncycastle.crypto.fpe.FPEFF1Engine;
+import org.bouncycastle.crypto.fpe.FPEFF3_1Engine;
 import org.bouncycastle.crypto.params.FPEParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 
@@ -26,29 +28,42 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 @UtilityClass
 public class FpeUtils {
 
-    public static final String DECIMAL_ALPHABET = "0123456789";
-
     /**
-     * Creates a sequence encryptor that uses the FF1 algorithm for format-preserving encryption. The result is never
-     * all zero: if encryption yields an all-zero string, the next sequence value is obtained until the result is not
-     * all-zero.
+     * Creates a sequence encryptor that uses the FF3-1 algorithm for format-preserving encryption. This algorithm (and
+     * not FF1) is used by Visa and other major players because it calls AES only once in each round (FF1 calls AES
+     * multiple times in each round which is more secure, but too slow).
+     * <p>
+     * The result is never all zero: if encryption yields an all-zero string, the next sequence value is obtained until
+     * the result is not all-zero.
      *
      * @param nextValueSupplier supplier for the next sequence value (e.g., from a database sequence)
-     * @param alphabet          alphabet, at least 10 characters (e.g. {@link #DECIMAL_ALPHABET} for integers), must not
-     *                          contain duplicates
-     * @param leftPadPositions  number of positions to which the sequence value will be left-padded (FF1 requires at
-     *                          least a million variants for the input string, and since 10^6 = 1 000 000, this value
-     *                          must be at least 6 for the decimal alphabet and at least 4 for Base32 because 32^4 = 1
-     *                          048 576)
-     * @param padCharacter      character to use for left-padding (e.g. '0' for integers)
-     * @param key               encryption key (AES key size: 16 / 24 / 32 bytes)
-     * @param tweak             tweak (AES IV), at least 7 bytes long
-     * @return a new {@link SequenceEncryptor} instance.
+     * @param alphabet          alphabet, from 10 to 256 characters (e.g. {@link TextUtils#DECIMAL_ALPHABET} for
+     *                          integers), must not contain duplicates
+     * @param leftPadPositions  number of positions to which the sequence value will be left-padded, as NIST recommends
+     *                          at least a million variants for the input string for even distribution; since 10^6 = 1
+     *                          000 000, this value must be at least 6 for the decimal alphabet and at least 4 for
+     *                          Base32 (because 32^4 = 1 048 576)
+     * @param padCharacter      character to use for left-padding ('0' for integers)
+     * @param key               AES key (128/192/256 bits)
+     * @param tweak             AES tweak (56 bits = 7 bytes)
+     * @return a new {@link SequenceEncryptor} instance
+     */
+    public SequenceEncryptor createFf31SequenceEncryptor(Supplier<String> nextValueSupplier, String alphabet,
+            int leftPadPositions, char padCharacter,
+            byte[] key, byte[] tweak) {
+        return new FpeSequenceEncryptor(nextValueSupplier, alphabet, leftPadPositions, padCharacter,
+                FPEFF3_1Engine::new, key, tweak);
+    }
+
+    /**
+     * Same as {@link #createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}, but leverages the FF1
+     * algorithm. It's more secure, but excessively slower, and is here mostly for backward compatibility.
      */
     public SequenceEncryptor createFf1SequenceEncryptor(Supplier<String> nextValueSupplier, String alphabet,
             int leftPadPositions, char padCharacter,
             byte[] key, byte[] tweak) {
-        return new Ff1SequenceEncryptor(nextValueSupplier, alphabet, leftPadPositions, padCharacter, key, tweak);
+        return new FpeSequenceEncryptor(nextValueSupplier, alphabet, leftPadPositions, padCharacter,
+                FPEFF1Engine::new, key, tweak);
     }
 
     public interface SequenceEncryptor {
@@ -77,12 +92,12 @@ public class FpeUtils {
 
     }
 
-    static class Ff1SequenceEncryptor implements SequenceEncryptor {
+    static class FpeSequenceEncryptor implements SequenceEncryptor {
 
         /**
-         * FF1 requires at least a million variants of the input string; given the base of 10 (decimal digits), 10^6 = 1
-         * 000 000, therefore at least 6 positions are needed. Other alphabets may be OK with a smaller value, for
-         * example, for Base32 it's 4 because 32^4 = 1 048 576.
+         * FF31 requires at least a million variants of the input string for even distribution; given the base of 10
+         * (decimal digits), 10^6 = 1 000 000, therefore at least 6 positions are needed. Other alphabets may be OK with
+         * a smaller value, for example, for Base32 it's 4 because 32^4 = 1 048 576.
          */
         private static final int MIN_LEFT_PAD_POSITIONS = 4;
 
@@ -100,45 +115,36 @@ public class FpeUtils {
 
         /**
          * Constructor. For details, see
-         * {@link #createFf1SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
+         * {@link #createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
          */
         @ConstraintArguments
-        Ff1SequenceEncryptor(Supplier<String> nextValueSupplier, String alphabet,
+        FpeSequenceEncryptor(Supplier<String> nextValueSupplier, String alphabet,
                 int leftPadPositions, char padCharacter,
-                byte[] key, byte[] tweak) {
+                Supplier<FPEEngine> fpeEngineSupplier, byte[] aesKey, byte[] aesTweak) {
             this.nextValueSupplier = checkNotNull(nextValueSupplier,
-                    _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.NEXTVALUESUPPLIER.name());
+                    _FpeUtils_FpeSequenceEncryptorArgumentsMeta.NEXTVALUESUPPLIER.name());
 
-            check(alphabet, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.ALPHABET.name())
+            check(alphabet, _FpeUtils_FpeSequenceEncryptorArgumentsMeta.ALPHABET.name())
                     .lengthBetweenInclusive(10, 256)
                     .constraint(str -> str.chars().distinct().count() == str.length(), "has duplicate characters");
 
-            // AES key sizes
-            check(key, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.KEY.name())
-                    .notNull()
-                    .constraint(value -> (value.length == 16) || (value.length == 24) || (value.length == 32),
-                            "size must be 16 / 24 / 32 bytes long");
-
-            check(tweak, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.TWEAK.name())
-                    .notNull()
-                    .constraint(value -> value.length >= 7, "must be at least 7 bytes long");
-
             // if alphabet is decimal-only, min. payload length is 6
             if (alphabet.chars().allMatch(chr -> (chr >= '0' && chr <= '9'))) {
-                check(leftPadPositions, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
+                check(leftPadPositions, _FpeUtils_FpeSequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
                         .constraint(it -> it >= 6,
-                                "must be 6 or more because FF1 requires at least a million variants");
+                                "must be 6 or more - NIST recommends at least a million variants of input");
             } else {
-                check(leftPadPositions, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
+                check(leftPadPositions, _FpeUtils_FpeSequenceEncryptorArgumentsMeta.LEFTPADPOSITIONS.name())
                         .constraint(it -> it >= MIN_LEFT_PAD_POSITIONS, "must be "
-                                + MIN_LEFT_PAD_POSITIONS + " or more because FF1 requires at least a million variants");
+                                + MIN_LEFT_PAD_POSITIONS
+                                + " or more - NIST recommends at least a million variants of input");
             }
 
-            check(padCharacter, _FpeUtils_Ff1SequenceEncryptorArgumentsMeta.PADCHARACTER.name())
+            check(padCharacter, _FpeUtils_FpeSequenceEncryptorArgumentsMeta.PADCHARACTER.name())
                     .notNull()
                     .constraint(chr -> alphabet.contains(chr.toString()), "must be part of the alphabet");
 
-            // can be chained with 'andThen', but each step needs to be debugged
+            // can be chained with 'andThen', but each step needs to be debuggable
             sequenceValuePadder = value -> StringUtils.leftPad(value, leftPadPositions, padCharacter);
 
             // store characters fast lookup in decimal2alphabet()
@@ -148,9 +154,9 @@ public class FpeUtils {
                     .boxed()
                     .collect(Collectors.toMap(alphabet::charAt, index -> index));
 
-            var fpeParams = new FPEParameters(new KeyParameter(key), alphabet.length(), tweak);
-
-            var encryptEngine = new FPEFF1Engine();
+            var fpeParams = new FPEParameters(new KeyParameter(aesKey), alphabet.length(), aesTweak);
+            // the engine checks key size and tweak size - it'd be superfluous to check it here
+            var encryptEngine = fpeEngineSupplier.get();
             encryptEngine.init(true, fpeParams);
             // map characters from the custom alphabet to indexes in that alphabet (thus obtaining decimal values),
             // encrypt the decimal values,
@@ -162,7 +168,7 @@ public class FpeUtils {
                 return decimal2alphabet(cipherText);
             };
 
-            var decryptEngine = new FPEFF1Engine();
+            FPEEngine decryptEngine = fpeEngineSupplier.get();
             decryptEngine.init(false, fpeParams);
             // same logic as for encryption
             decryptorFunction = input -> {
@@ -200,9 +206,8 @@ public class FpeUtils {
         @ConstraintArguments
         @Override
         public String decrypt(String encryptedValue) {
-            checkNotBlank(encryptedValue, _FpeUtils_Ff1SequenceEncryptorDecryptArgumentsMeta.ENCRYPTEDVALUE.name());
+            checkNotBlank(encryptedValue, _FpeUtils_FpeSequenceEncryptorDecryptArgumentsMeta.ENCRYPTEDVALUE.name());
             return decryptorFunction.apply(encryptedValue);
-
         }
 
         /**
@@ -245,8 +250,8 @@ public class FpeUtils {
 
             for (byte b : input) {
                 try {
-                    // byte is signed in Java, so it can be negative.
-                    // `b & 0xFF` converts it to an int in the range [0, 255] before using it as an index.
+                    // byte is signed in Java, so it can be negative;
+                    // `b & 0xFF` converts it to an int in the range [0, 255] before using it as an index
                     builder.append(alphabetChars[b & 0xFF]);
                 }
                 // this can happen if the encrypted value was created with a different alphabet.

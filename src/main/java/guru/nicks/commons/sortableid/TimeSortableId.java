@@ -56,6 +56,7 @@ public class TimeSortableId extends TimeSortableIdComponents {
     @ConstraintArguments
     public TimeSortableId(Instant timestamp, long sequence) {
         super(timestamp, sequence);
+
         check(sequence, _TimeSortableIdArgumentsMeta.SEQUENCE.name())
                 .betweenInclusive(0L, CONFIG.getMaxEncodableSequence());
 

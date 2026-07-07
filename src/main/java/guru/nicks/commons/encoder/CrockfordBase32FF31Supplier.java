@@ -12,22 +12,25 @@ import java.util.function.Supplier;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
 /**
- * Generates Crockford's Base32-encoded FPE-encrypted (FF3-1) IDs using a combination of:
+ * Generates FPE-encrypted (FF3-1) values using a combination of:
  * <ul>
  *  <li>a sequence number (supplier passed to constructor)</li>
  *  <li>encryption (parameters passed to constructor)</li>
- *  <li>Base32 {@link CrockfordBase32SequenceEncoder encoder}</li>
+ *  <li>Crockford's Base32 {@link CrockfordBase32SequenceEncoder encoder}</li>
  * </ul>
- * The generated ID may contain leading zeroes but is never zeroes-only.
+ * The generated value may contain <b>leading zeroes</b> but is never zeroes-only.
  * <p>
- * Original sequence numbers shorter than the value passed to constructor will be, before appending a check digit,
- * left-padded with zeroes (or its equivalent in the alphabet) in order to <b>hide the actual number of records</b>.
- * Here are a few estimates (big shops have around 350 million products and 1.5 billion orders a year):
+ * Original sequence numbers shorter than the limit passed to the constructor are left-padded with zeroes - in order to
+ * <b>hide the original number</b> (e.g., the number of shop orders). Here are a few estimates (big shops have around
+ * 350 million products and 1.5 billion orders a year):
  * <ul>
- *  <li>7 payload characters encode 34 billion records (32^7 = 34 359 738 368)</li>
- *  <li>6 payload characters encode 1 billion records (32^6 = 1 073 741 824)</li>
- *  <li>5 payload characters encode 33 million records (32^5 = 33 554 432)</li>
- *  <li>4 payload characters encode 1 million records (32^4 = 1 048 576)</li>
+ *  <li>1 character encodes numbers up to 31 (32^1 - 1 = 31 = z)</li>
+ *  <li>2 characters encode numbers up to 1 thousand (32^2 - 1 = 1 023 = zz)</li>
+ *  <li>3 characters encode numbers up to ≈32 thousand (32^3 - 1 = 32 767 = zzz)</li>
+ *  <li>4 characters encode numbers up to ≈1 million (32^4 - 1 = 1 048 575 = zzzz)</li>
+ *  <li>5 characters encode numbers up to ≈33 million (32^5 - 1 = 33 554 431 = zzzzz)</li>
+ *  <li>6 characters encode numbers up to ≈1 billion (32^6 - 1 = 1 073 741 823 = zzzzzz)</li>
+ *  <li>7 characters encode numbers up to ≈34 billion (32^7 - 1 = 34 359 738 367 = zzzzzzz)</li>
  * </ul>
  *
  * @see CrockfordBase32ChecksumValidator

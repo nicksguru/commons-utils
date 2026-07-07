@@ -14,7 +14,7 @@ Feature: UuidUtils
   Scenario: Certain UUID is encoded to Crockford Base32
     Given a UUID "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
     When the UUID is encoded to Crockford Base32
-    Then the encoded string should equal "z0emzbkxxg8x19v502gcj7kbyr"
+    Then the encoded string should equal "Z0EMZBKXXG8X19V502GCJ7KBYR"
 
   Scenario: Arbitrary UUID is encoded to Crockford Base32
     Given a UUID "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"

@@ -21,7 +21,8 @@ public class TimeSortableIdChecksummer implements Checksummer {
     private final Encoder<Long> sequenceEncoder;
 
     /**
-     * Computes checksum as a decimal digit.
+     * Computes checksum as a decimal digit. The algorithm used is {@link HashUtils#VERHOEFF_DIGIT} because it's not
+     * modulo-based and therefore accepts all-zero input.
      *
      * @param value arbitrary string
      * @return checksum (0..9)

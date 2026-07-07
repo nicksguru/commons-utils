@@ -29,9 +29,10 @@ public class TextUtils {
     public static final String DECIMAL_ALPHABET = "0123456789";
 
     /**
-     * Crockford's Base32 character set.
+     * Crockford's Base32 (sortable, uppercase) character set. Uppercase letters are more readable because they have the
+     * same height and are easier to read for people whose eyesight is not perfect.
      */
-    public static final String CROCKFORD_BASE32_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
+    public static final String CROCKFORD_BASE32_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
     /**
      * Matches all possible whitespaces. For inclusion in '[]'-style regexps.

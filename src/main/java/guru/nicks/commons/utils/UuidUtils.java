@@ -1,5 +1,7 @@
 package guru.nicks.commons.utils;
 
+import guru.nicks.commons.utils.text.TextUtils;
+
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.github.f4b6a3.uuid.codec.base.BaseN;
 import com.github.f4b6a3.uuid.codec.base.BaseNCodec;
@@ -108,7 +110,7 @@ public class UuidUtils {
 
     private static class CrockfordBase32UuidCodec extends BaseNCodec {
 
-        private static final BaseN BASE_N = new BaseN("0123456789abcdefghjkmnpqrstvwxyz");
+        private static final BaseN BASE_N = new BaseN(TextUtils.CROCKFORD_BASE32_ALPHABET);
 
         // it's crucial that this static var is created AFTER other static vars it depends on are initialized,
         // otherwise those vars will be null

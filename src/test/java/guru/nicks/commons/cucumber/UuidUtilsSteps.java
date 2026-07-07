@@ -145,10 +145,10 @@ public class UuidUtilsSteps {
 
     @Then("the encoded string should contain only valid Crockford Base32 characters")
     public void theEncodedStringShouldContainOnlyValidCrockfordBase32Characters() {
-        // Crockford Base32 alphabet: 0123456789ABCDEFGHJKMNPQRSTVWXYZ (case insensitive)
+        // Crockford Base32 alphabet: 0123456789ABCDEFGHJKMNPQRSTVWXYZ (case-SENSITIVE in this implementation)
         // Excluding: I, L, O, U
         Predicate<String> crockfordPattern = Pattern
-                .compile("^[0-9A-HJ-NP-TV-Z]+$", Pattern.CASE_INSENSITIVE)
+                .compile("^[0-9A-HJ-NP-TV-Z]+$")
                 .asPredicate();
 
         assertThat(crockfordPattern.test(encodedUuid))

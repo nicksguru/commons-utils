@@ -21,6 +21,9 @@ import java.util.stream.Collectors;
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
+/**
+ * @see DammChecksumUtils
+ */
 @UtilityClass
 @Slf4j
 public class ChecksumUtils {

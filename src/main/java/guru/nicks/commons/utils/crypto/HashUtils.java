@@ -8,14 +8,21 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.validator.routines.checkdigit.CheckDigitException;
 import org.apache.commons.validator.routines.checkdigit.ISINCheckDigit;
 import org.apache.commons.validator.routines.checkdigit.LuhnCheckDigit;
+import org.apache.commons.validator.routines.checkdigit.ModulusCheckDigit;
 import org.apache.commons.validator.routines.checkdigit.VerhoeffCheckDigit;
 import org.bouncycastle.crypto.digests.SHA3Digest;
 import org.bouncycastle.crypto.digests.ShortenedDigest;
 
 import java.nio.charset.StandardCharsets;
+import java.util.function.UnaryOperator;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 
+/**
+ * Uniform interface for various hash and checksum algorithms.
+ *
+ * @see ChecksumUtils#computeExtendedCheckDigit(String, UnaryOperator, String)
+ */
 public enum HashUtils {
 
     /**
@@ -101,11 +108,12 @@ public enum HashUtils {
     },
 
     /**
-     * Calculates the Luhn check digit (integer [0-9]) for the given decimal string, such as a credit card number.
-     * crashes on all-zero input.
+     * Calculates the Luhn check digit (integer [0-9]) for the given <b>decimal string</b>, such as a credit card
+     * number.
      * <p>
-     * Throws {@link IllegalArgumentException} if the input is blank, or all-zero, or not numeric. The all-zero check is
-     * common to all modulo-based algorithms, see {@code ModulusCheckDigit#calculateModulus(String, boolean)}).
+     * Throws {@link IllegalArgumentException} if the input is blank, or all-zeroes, or not numeric. The all-zeroes
+     * check is common to all modulo-based algorithms - see
+     * {@link ModulusCheckDigit#calculateModulus(String, boolean)}).
      */
     LUHN_DIGIT {
         /**
@@ -136,8 +144,8 @@ public enum HashUtils {
     },
 
     /**
-     * Calculates the ISIN check digit (integer [0-9]) for the given [A-Za-z0-9] string. This is an extension to the
-     * Luhn algorithm where A=0, B=1, ..., Z=35.
+     * Calculates the ISIN check digit (integer [0-9]) for the given <b>alphanumeric string</b>. This is an extension to
+     * the Luhn algorithm assuming A=0, B=1, ..., Z=35.
      * <p>
      * WARNING: the Apache Commons implementation treats lowercase characters like uppercase (because it calls
      * {@link Character#getNumericValue(char)})!
@@ -175,7 +183,7 @@ public enum HashUtils {
     },
 
     /**
-     * Calculates the Verhoeff check digit (integer [0..9]) for the given decimal string. Unlike modulo-based
+     * Calculates the Verhoeff check digit (integer [0..9]) for the given <b>decimal string</b>. Unlike modulo-based
      * algorithms, tolerates all-zero input. Catches more errors than the Luhn algorithm. See description <a
      * href="https://en.wikipedia.org/wiki/Verhoeff_algorithm">here</a>.
      * <p>
@@ -192,7 +200,7 @@ public enum HashUtils {
 
         /**
          * @return bytes of a string holding a decimal digit
-         * @throws IllegalArgumentException the input is blank or non-decimal
+         * @throws IllegalArgumentException if the input is non-decimal
          */
         @Override
         protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
@@ -206,6 +214,38 @@ public enum HashUtils {
             }
 
             return str.getBytes(StandardCharsets.UTF_8);
+        }
+    },
+
+    /**
+     * Calculates the Damm check digit (integer [0..9]) for the given <b>decimal string</b>. Unlike modulo-based
+     * algorithms, tolerates all-zero input. Catches more errors than the Luhn algorithm and is simpler than the
+     * Verhoeff one. See description <a href="https://en.wikipedia.org/wiki/Damm_algorithm">here</a>.
+     * <p>
+     * The algorithm is capable of accepting input in an arbitrary alphabet and generating output in the same alphabet,
+     * but this method uses {@link DammChecksumUtils#DECIMAL}. See {@link DammChecksumUtils} for details.
+     * <p>
+     * Throws {@link IllegalArgumentException} if the input is non-decimal
+     */
+    DAMM_DIGIT {
+        /**
+         * @return 1
+         */
+        @Override
+        public int getMaxHashLengthBytes() {
+            return 1;
+        }
+
+        /**
+         * @return bytes of a string holding a decimal digit
+         * @throws IllegalArgumentException if the input is non-decimal
+         */
+        @Override
+        protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
+            char digit = DammChecksumUtils.DECIMAL.compute(
+                    new String(source, StandardCharsets.UTF_8));
+
+            return new byte[]{(byte) digit};
         }
     };
 

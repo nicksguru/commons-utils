@@ -125,7 +125,8 @@ public class HashUtilsSteps {
                     // plain strings because these algorithms generate decimal digits
                     if ((testData.getAlgorithm() == HashUtils.LUHN_DIGIT)
                             || (testData.getAlgorithm() == HashUtils.ISIN_DIGIT)
-                            || (testData.getAlgorithm() == HashUtils.VERHOEFF_DIGIT)) {
+                            || (testData.getAlgorithm() == HashUtils.VERHOEFF_DIGIT)
+                            || (testData.getAlgorithm() == HashUtils.DAMM_DIGIT)) {
                         String resultString = new String(hashResult, StandardCharsets.UTF_8);
                         assertThat(resultString)
                                 .as("hashResult as plain string for " + testData.getAlgorithm())

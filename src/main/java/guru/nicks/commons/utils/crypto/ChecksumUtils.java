@@ -81,8 +81,8 @@ public class ChecksumUtils {
      * @param payload   string to compute checksum for
      * @param algorithm returns byte representation of a {@link String} holding any integer (negative values will be
      *                  inverted, the number length is unlimited), for example {@link HashUtils#LUHN_DIGIT} (doesn't
-     *                  permit all-zero input) or {@link HashUtils#VERHOEFF_DIGIT} which, unlike modulo-based
-     *                  algorithms, accepts all-zero input, but permits decimal digits only
+     *                  permit all-zero input) or {@link HashUtils#DAMM_DIGIT} (unlike modulo-based algorithms, accepts
+     *                  all-zero input, but permits decimal digits only)
      * @param alphabet  alphabet to map the integer checksum on
      * @return a character belonging to {@code alphabet}
      * @throws IllegalArgumentException {@code payload} is {@code null} or ''; or {@code algorithm} is {@code null}; or

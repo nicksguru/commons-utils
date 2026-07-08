@@ -14,7 +14,8 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 
 /**
  *
- * Generates and validates <a href="https://en.wikipedia.org/wiki/Damm_algorithm">Damm checksums</a>.
+ * Generates and validates <a href="https://en.wikipedia.org/wiki/Damm_algorithm">Damm checksums</a>. Any radix and
+ * alphabet can be used, which requires calling {@link Impl#Impl(DammRadix, String)} manually.
  *
  * @see #DECIMAL
  * @see #CROCKFORD_BASE32
@@ -23,11 +24,15 @@ public class DammChecksumUtils {
 
     /**
      * Operates within {@link TextUtils#DECIMAL_ALPHABET}, i.e. both the input and the checksum belong to it.
+     *
+     * @see DammChecksumUtils
      */
     public static final Impl DECIMAL = new Impl(DammRadix.R10, TextUtils.DECIMAL_ALPHABET);
 
     /**
      * Operates within {@link TextUtils#CROCKFORD_BASE32_ALPHABET}, i.e. both the input and the checksum belong to it.
+     *
+     * @see DammChecksumUtils
      */
     public static final Impl CROCKFORD_BASE32 = new Impl(DammRadix.R32, TextUtils.CROCKFORD_BASE32_ALPHABET);
 
@@ -149,11 +154,10 @@ public class DammChecksumUtils {
         private final int[] charIndexesInAlphabet = new int[256];
 
         private final String alphabet;
-        int[][] dammTable;
+        private int[][] dammTable;
 
         /**
-         * Note that {@code dammRadix} does not imply any specific alphabet, e.g. any 10 letters can be used under the
-         * radix of 10.
+         * The radix does not imply any specific alphabet, e.g. any 10 letters can be used under the radix of 10.
          *
          * @param dammRadix radix of the Damm checksum (equals the alphabet length)
          * @param alphabet  alphabet of the Damm checksum, must not contain duplicates or characters outside the

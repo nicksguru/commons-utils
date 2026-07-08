@@ -17,6 +17,10 @@ public class CustomEpochSteps {
 
     @When("sequence number is converted to time-sortable")
     public void idIsConvertedToTimeSortable() {
+        // max. timestamp and sequence
+        //        textWorld.setDate(Instant.parse("2568-08-24T00:00:00Z"));
+        //        textWorld.setInput("922337203685477579");
+
         textWorld.setOutput(new TimeSortableId(textWorld.getDate(),
                 // numbers may contain whitespaces, for readability
                 Long.parseLong(StringUtils.deleteWhitespace(textWorld.getInput()))

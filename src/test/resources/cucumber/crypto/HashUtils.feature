@@ -73,22 +73,39 @@ Feature: Hash Utilities
     And no exception should be thrown
 
   Scenario: Computing VERHOEFF for all-zero input
-    Given input string "000000"
+    Given input string "0000"
     And hash algorithm "VERHOEFF_DIGIT"
     When the hash is computed
-    Then no exception should be thrown
+    Then the hash result as string should be "7"
+    And no exception should be thrown
+
+  Scenario: Computing DAMM for valid input
+    Given input string "236"
+    And hash algorithm "DAMM_DIGIT"
+    When the hash is computed
+    Then the hash result as string should be "1"
+    And no exception should be thrown
+
+  Scenario: Computing DAMM for all-zero input
+    Given input string "000000"
+    And hash algorithm "DAMM_DIGIT"
+    When the hash is computed
+    Then the hash result as string should be "0"
+    And no exception should be thrown
 
   Scenario: Verify max hash lengths
     Then the max hash length for "XXHASH3" should be 8
     And the max hash length for "SHA3_256" should be 32
     And the max hash length for "LUHN_DIGIT" should be 1
     And the max hash length for "VERHOEFF_DIGIT" should be 1
+    And the max hash length for "DAMM_DIGIT" should be 1
 
   Scenario: Verify default hash lengths
     Then the default hash length for "XXHASH3" should be 8
     And the default hash length for "SHA3_256" should be 32
     And the default hash length for "LUHN_DIGIT" should be 1
     And the default hash length for "VERHOEFF_DIGIT" should be 1
+    And the default hash length for "DAMM_DIGIT" should be 1
 
   Scenario: Batch testing of hash operations
     When the following hash operations are performed:
@@ -103,6 +120,9 @@ Feature: Hash Utilities
       | 142857      | VERHOEFF_DIGIT |        | 0                                | false           |                              |
       | 000000      | VERHOEFF_DIGIT |        | 6                                | false           | all-zero                     |
       | ABC123      | VERHOEFF_DIGIT |        |                                  | true            | non-numeric                  |
+      | 142857      | DAMM_DIGIT     |        | 7                                | false           |                              |
+      | 000000      | DAMM_DIGIT     |        | 0                                | false           | all-zero                     |
+      | ABC123      | DAMM_DIGIT     |        |                                  | true            | non-numeric                  |
       | test string | XXHASH3        | 8      | 3D5061310B23B3B9                 | false           |                              |
       | test string | XXHASH3        | 9      |                                  | true            |                              |
       | hello world | SHA3_256       | 16     | 644BCC7E564373040999AAC89E7622F3 | false           |                              |

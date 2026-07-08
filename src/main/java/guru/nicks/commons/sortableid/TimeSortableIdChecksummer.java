@@ -3,14 +3,16 @@ package guru.nicks.commons.sortableid;
 import guru.nicks.commons.encoder.Checksummer;
 import guru.nicks.commons.encoder.Encoder;
 import guru.nicks.commons.utils.crypto.ChecksumUtils;
+import guru.nicks.commons.utils.crypto.DammChecksumUtils;
 import guru.nicks.commons.utils.crypto.HashUtils;
+import guru.nicks.commons.utils.text.TextUtils;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Computes and verifies checksum for {@link TimeSortableId#getId()}. Takes into account that the checksum is part of
- * the decimal sequence - its rightmost digit.
+ * Computes and verifies checksum for {@link TimeSortableId#getId()}. Takes into account that the checksum is part of a
+ * decimal sequence - its rightmost digit.
  */
 @RequiredArgsConstructor
 public class TimeSortableIdChecksummer implements Checksummer {
@@ -21,15 +23,16 @@ public class TimeSortableIdChecksummer implements Checksummer {
     private final Encoder<Long> sequenceEncoder;
 
     /**
-     * Computes checksum as a decimal digit. The algorithm used is {@link HashUtils#VERHOEFF_DIGIT} because it's not
+     * Computes checksum as a decimal digit. The algorithm used is {@link DammChecksumUtils#DECIMAL} because it's not
      * modulo-based and therefore accepts all-zero input.
      *
-     * @param value arbitrary string
+     * @param value alphanumeric string
      * @return checksum (0..9)
      */
     @Override
     public String compute(String value) {
-        char checksum = ChecksumUtils.computeExtendedCheckDigit(value, HashUtils.VERHOEFF_DIGIT::compute, "0123456789");
+        char checksum = ChecksumUtils.computeExtendedCheckDigit(value, HashUtils.DAMM_DIGIT::compute,
+                TextUtils.DECIMAL_ALPHABET);
         return String.valueOf(checksum);
     }
 

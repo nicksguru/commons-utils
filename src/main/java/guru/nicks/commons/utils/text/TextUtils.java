@@ -1,7 +1,5 @@
 package guru.nicks.commons.utils.text;
 
-import guru.nicks.commons.utils.crypto.FpeUtils;
-
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
@@ -14,7 +12,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -24,15 +21,20 @@ import java.util.regex.Pattern;
 public class TextUtils {
 
     /**
-     * For use e.g. in {@link FpeUtils#createFf31SequenceEncryptor(Supplier, String, int, char, byte[], byte[])}.
+     * Decimal digits.
      */
     public static final String DECIMAL_ALPHABET = "0123456789";
 
     /**
      * Crockford's Base32 (sortable, uppercase) character set. Uppercase letters are more readable because they have the
-     * same height and are easier to read for people whose eyesight is not perfect.
+     * same height and are bigger.
      */
     public static final String CROCKFORD_BASE32_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    /**
+     * Alphanumeric character set: 10 decimal digits + 26 lowercase Latin letters + 26 uppercase Latin letters = 62.
+     */
+    public static final String ALPHANUMERIC_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     /**
      * Matches all possible whitespaces. For inclusion in '[]'-style regexps.

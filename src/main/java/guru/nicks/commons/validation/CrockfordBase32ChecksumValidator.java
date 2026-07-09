@@ -1,6 +1,5 @@
 package guru.nicks.commons.validation;
 
-import guru.nicks.commons.utils.crypto.DammChecksumUtils;
 import guru.nicks.commons.utils.text.TextUtils;
 
 import am.ik.yavi.meta.ConstraintArguments;
@@ -18,8 +17,7 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
  *     <li>max. length (passed to constructor)</li>
  *     <li>payload content ({@link TextUtils#CROCKFORD_BASE32_ALPHABET}), but unlike the original Crockford Base32,
  *         <b>input is treated case-sensitively</b> - non-uppercase characters are invalid</li>
- *     <li>{@link DammChecksumUtils#CROCKFORD_BASE32 Damm check digit} whose advantage is even distribution across
- *         arbitrary alphabets (as opposed to ISIN which generates decimal digits only)</li>
+ *     <li>{@link #calculateCheckDigit(String)}</li>
  *  </ul>
  */
 public abstract class CrockfordBase32ChecksumValidator implements Predicate<String> {
@@ -55,6 +53,7 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
                 .positive();
         check(minPayloadLength, _CrockfordBase32ChecksumValidatorArgumentsMeta.MINPAYLOADLENGTH.name())
                 .betweenInclusive(1, maxPayloadLength);
+
         minTotalLength = minPayloadLength + CHECKSUM_LENGTH;
         maxTotalLength = maxPayloadLength + CHECKSUM_LENGTH;
 
@@ -136,14 +135,12 @@ public abstract class CrockfordBase32ChecksumValidator implements Predicate<Stri
     }
 
     /**
-     * Calculates a Damm check digit.
+     * Calculates a check digit.
      *
      * @param payload input string
      * @return check digit, belongs to {@link TextUtils#CROCKFORD_BASE32_ALPHABET}
      * @throws IllegalStateException check digit calculation error
      */
-    private char calculateCheckDigit(String payload) {
-        return DammChecksumUtils.CROCKFORD_BASE32.compute(payload);
-    }
+    protected abstract char calculateCheckDigit(String payload);
 
 }

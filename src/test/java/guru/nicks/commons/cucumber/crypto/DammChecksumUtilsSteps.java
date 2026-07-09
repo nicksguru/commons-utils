@@ -29,84 +29,59 @@ public class DammChecksumUtilsSteps {
 
     private DammChecksumUtils.Impl implementation;
 
-    @Given("a decimal payload {string}")
-    public void aDecimalPayload(String payload) {
+    @Given("a payload {string}")
+    public void aPayload(String payload) {
         this.payload = payload;
     }
 
-    @Given("a Crockford Base32 payload {string}")
-    public void aCrockfordBase32Payload(String payload) {
-        this.payload = payload;
-    }
-
-    @Given("a decimal value with checksum {string}")
-    public void aDecimalValueWithChecksum(String value) {
+    @Given("a value with checksum {string}")
+    public void aValueWithChecksum(String value) {
         this.value = value;
     }
 
-    @Given("a Crockford Base32 value with checksum {string}")
-    public void aCrockfordBase32ValueWithChecksum(String value) {
-        this.value = value;
-    }
-
-    @Given("a decimal value with invalid checksum {string}")
-    public void aDecimalValueWithInvalidChecksum(String value) {
-        this.value = value;
-    }
-
-    @Given("a Crockford Base32 value with invalid checksum {string}")
-    public void aCrockfordBase32ValueWithInvalidChecksum(String value) {
+    @Given("a value with invalid checksum {string}")
+    public void aValueWithInvalidChecksum(String value) {
         this.value = value;
     }
 
     @Given("a valid decimal checksummed value {string}")
     public void aValidDecimalChecksummedValue(String original) {
-        this.value = original;
+        value = original;
     }
 
     @Given("a valid Crockford Base32 checksummed value {string}")
     public void aValidCrockfordBase32ChecksummedValue(String original) {
-        this.value = original;
+        value = original;
+    }
+
+    @Given("a valid alphanumeric checksummed value {string}")
+    public void aValidAlphanumericChecksummedValue(String original) {
+        value = original;
     }
 
     @Given("an empty string")
     public void anEmptyString() {
-        this.value = "";
+        value = "";
     }
 
     @Given("a single character {string}")
     public void aSingleCharacter(String character) {
-        this.value = character;
+        value = character;
     }
 
-    @Given("a decimal payload with invalid character {string}")
-    public void aDecimalPayloadWithInvalidCharacter(String payload) {
+    @Given("a payload with invalid character {string}")
+    public void aPayloadWithInvalidCharacter(String payload) {
         this.payload = payload;
     }
 
-    @Given("a Crockford Base32 payload with invalid character {string}")
-    public void aCrockfordBase32PayloadWithInvalidCharacter(String payload) {
-        this.payload = payload;
-    }
-
-    @Given("a decimal value with invalid character {string}")
-    public void aDecimalValueWithInvalidCharacter(String value) {
+    @Given("a value with invalid character {string}")
+    public void aValueWithInvalidCharacter(String value) {
         this.value = value;
     }
 
-    @Given("a Crockford Base32 value with invalid character {string}")
-    public void aCrockfordBase32ValueWithInvalidCharacter(String value) {
-        this.value = value;
-    }
-
-    @Given("an empty decimal payload")
-    public void anEmptyDecimalPayload() {
-        this.payload = "";
-    }
-
-    @Given("an empty Crockford Base32 payload")
-    public void anEmptyCrockfordBase32Payload() {
-        this.payload = "";
+    @Given("an empty payload")
+    public void anEmptyPayload() {
+        payload = "";
     }
 
     @When("Damm checksum is computed using DECIMAL implementation")
@@ -127,6 +102,15 @@ public class DammChecksumUtilsSteps {
         textWorld.setLastException(throwable);
     }
 
+    @When("Damm checksum is computed using ALPHANUMERIC implementation")
+    public void dammChecksumIsComputedUsingALPHANUMERICImplementation() {
+        implementation = DammChecksumUtils.ALPHANUMERIC;
+
+        var throwable = catchThrowable(() ->
+                checksum = implementation.compute(payload));
+        textWorld.setLastException(throwable);
+    }
+
     @When("the value is validated using DECIMAL implementation")
     public void theValueIsValidatedUsingDECIMALImplementation() {
         implementation = DammChecksumUtils.DECIMAL;
@@ -136,6 +120,12 @@ public class DammChecksumUtilsSteps {
     @When("the value is validated using CROCKFORD_BASE32 implementation")
     public void theValueIsValidatedUsingCROCKFORD_BASE32Implementation() {
         implementation = DammChecksumUtils.CROCKFORD_BASE32;
+        isValid = implementation.isValid(value);
+    }
+
+    @When("the value is validated using ALPHANUMERIC implementation")
+    public void theValueIsValidatedUsingALPHANUMERICImplementation() {
+        implementation = DammChecksumUtils.ALPHANUMERIC;
         isValid = implementation.isValid(value);
     }
 
@@ -173,6 +163,13 @@ public class DammChecksumUtilsSteps {
         checksum2 = implementation.compute(payload);
     }
 
+    @When("Damm checksum is computed twice using ALPHANUMERIC implementation")
+    public void dammChecksumIsComputedTwiceUsingALPHANUMERICImplementation() {
+        implementation = DammChecksumUtils.ALPHANUMERIC;
+        checksum = implementation.compute(payload);
+        checksum2 = implementation.compute(payload);
+    }
+
     @Then("the checksum character should be {string}")
     public void theChecksumCharacterShouldBe(String expectedChecksum) {
         assertThat(checksum)
@@ -194,8 +191,8 @@ public class DammChecksumUtilsSteps {
                 .isFalse();
     }
 
-    @Then("both checksums should be identical")
-    public void bothChecksumsShouldBeIdentical() {
+    @Then("both Damm checksums should be identical")
+    public void bothDammChecksumsShouldBeIdentical() {
         assertThat(checksum)
                 .as("first checksum")
                 .isEqualTo(checksum2);

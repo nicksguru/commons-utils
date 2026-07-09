@@ -4,12 +4,14 @@ import guru.nicks.commons.cucumber.world.TextWorld;
 import guru.nicks.commons.utils.crypto.ChecksumUtils;
 import guru.nicks.commons.utils.json.JsonUtils;
 
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,11 +53,53 @@ public class ChecksumUtilsSteps {
         textWorld.setOutput(checksum);
     }
 
-    @And("sorted JSON should be {string}")
-    public void sortedJSONShouldBe(String expectedJson) {
+    @Then("sorted JSON should be {string}")
+    public void sortedJsonShouldBe(String expectedJson) {
         assertThat(sortedJson)
                 .as("sorted JSON")
                 .isEqualTo(expectedJson);
+    }
+
+    @Then("JSON checksum is computed again for scalar input")
+    public void jsonChecksumIsComputedAgainForScalarInput() {
+        String input = textWorld.getInput();
+
+        if ("null".equals(input)) {
+            input = null;
+        }
+
+        firstChecksum = textWorld.getOutput().getFirst();
+        secondChecksum = ChecksumUtils.computeJsonChecksum(input);
+    }
+
+    @Then("both checksums should be identical")
+    public void bothChecksumsShouldBeIdentical() {
+        assertThat(firstChecksum)
+                .as("first checksum")
+                .isEqualTo(secondChecksum);
+    }
+
+    @Then("checksums should be different")
+    public void checksumsShouldBeDifferent() {
+        assertThat(firstChecksum)
+                .as("first checksum")
+                .isNotEqualTo(secondChecksum);
+    }
+
+    @Then("output should match Base64 format")
+    public void outputShouldMatchBase64Format() {
+        String output = textWorld.getOutput().getFirst();
+        assertThat(output)
+                .as("Base64 format")
+                .matches(Pattern.compile("^[A-Za-z0-9+/]+={0,2}$"));
+    }
+
+    @Then("output length should be {int}")
+    public void outputLengthShouldBe(int expectedLength) {
+        String output = textWorld.getOutput().getFirst();
+        assertThat(output.length())
+                .as("checksum length")
+                .isEqualTo(expectedLength);
     }
 
     @Value

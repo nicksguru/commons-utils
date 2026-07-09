@@ -1,7 +1,6 @@
 package guru.nicks.commons.utils.crypto;
 
 import guru.nicks.commons.utils.json.JsonUtils;
-import guru.nicks.commons.validation.dsl.ValiDsl;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import jakarta.annotation.Nullable;
@@ -16,7 +15,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
@@ -65,15 +63,18 @@ public class ChecksumUtils {
     }
 
     /**
-     * A check digit originally accepts decimal strings only and produces a decimal digit. This method extends that to
-     * arbitrary input strings and alphabets: decimal strings are processed as-is (to retain compatibility with credit
-     * card numbers), non-decimal ones are transformed to their Unicode codepoints (Unicode as 1 114 112 codepoints).
+     * A check digit algorithm usually accepts decimal strings and produces a decimal digit ({@link DammChecksumUtils}
+     * looks more preferable for decimal and alphanumeric inputs than the workaround described below). This method
+     * extends that to arbitrary input strings and alphabets: decimal strings are processed as-is (to retain
+     * compatibility with credit card numbers), non-decimal ones are transformed to their Unicode codepoints (Unicode
+     * has 1 114 112 codepoints).
      * <p>
-     * The check digit (or a smaller/bigger integer) is then projected onto the given alphabet. For example, if the
+     * The check digit (or a smaller/bigger integer) is then projected onto the custom alphabet. For example, if the
      * alphabet is 'abc' and the digit is 1, the checksum is 'b'; the digit 3 becomes 'a' because the alphabet is too
      * short and rollover is performed.
      * <p>
-     * If {@code algorithm} returns a digit, only the first 10 characters of the alphabet are used.
+     * WARNING: if {@code algorithm} returns a decimal digit, only the first 10 characters of the alphabet are used, and
+     * most of the time they are 0 to 9, which means the checksum doesn't use the full alphabet and has less strength.
      * <p>
      * WARNING: the checksum should not be treated as crypto grade, it's just a way to validate something before looking
      * it up in DB - to reduce DB pressure.
@@ -91,7 +92,7 @@ public class ChecksumUtils {
      */
     @ConstraintArguments
     public static char computeExtendedCheckDigit(String payload, UnaryOperator<byte[]> algorithm, String alphabet) {
-        ValiDsl.check(payload, _ChecksumUtilsComputeExtendedCheckDigitArgumentsMeta.PAYLOAD.name()).notEmpty();
+        check(payload, _ChecksumUtilsComputeExtendedCheckDigitArgumentsMeta.PAYLOAD.name()).notEmpty();
         checkNotNull(algorithm, _ChecksumUtilsComputeExtendedCheckDigitArgumentsMeta.ALGORITHM.name());
         check(alphabet, _ChecksumUtilsComputeExtendedCheckDigitArgumentsMeta.ALPHABET.name())
                 .notBlank()
@@ -103,10 +104,12 @@ public class ChecksumUtils {
         if (ALL_DECIMALS_PREDICATE.test(payload)) {
             digits = payload;
         } else {
-            digits = payload
-                    .codePoints()
-                    .mapToObj(String::valueOf)
-                    .collect(Collectors.joining(""));
+            // optimized: use StringBuilder to avoid intermediate String objects created by mapToObj(String::valueOf)
+            // (each codepoint can be up to 6 digits)
+            StringBuilder sb = new StringBuilder(payload.length() * 6);
+            payload.codePoints()
+                    .forEach(sb::append);
+            digits = sb.toString();
         }
 
         BigInteger checksumAsInt = Optional.of(digits.getBytes(StandardCharsets.UTF_8))

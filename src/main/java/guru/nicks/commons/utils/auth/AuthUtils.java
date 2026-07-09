@@ -2,7 +2,6 @@ package guru.nicks.commons.utils.auth;
 
 import guru.nicks.commons.auth.domain.BasicAuthCredentials;
 import guru.nicks.commons.utils.crypto.HashUtils;
-import guru.nicks.commons.validation.dsl.ValiDsl;
 
 import am.ik.yavi.meta.ConstraintArguments;
 import lombok.experimental.UtilityClass;
@@ -65,7 +64,7 @@ public class AuthUtils {
      */
     @ConstraintArguments
     public static BasicAuthCredentials parseBasicAuthHeader(String header) {
-        ValiDsl.check(header, _AuthUtilsParseBasicAuthHeaderArgumentsMeta.HEADER.name())
+        check(header, _AuthUtilsParseBasicAuthHeaderArgumentsMeta.HEADER.name())
                 .notBlank()
                 // prefix plus something else (header value)
                 .longerThan(BasicAuthCredentials.BASIC_AUTH_PREFIX.length())

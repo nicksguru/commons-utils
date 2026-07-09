@@ -1,7 +1,5 @@
 package guru.nicks.commons.utils.text;
 
-import guru.nicks.commons.validation.dsl.ValiDsl;
-
 import am.ik.yavi.meta.ConstraintArguments;
 import jakarta.annotation.Nullable;
 import lombok.SneakyThrows;
@@ -17,6 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.regex.Pattern;
 
+import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
 /**
@@ -143,7 +142,7 @@ public class TimeUtils {
     @ConstraintArguments
     public Duration getDurationSinceCustomEpoch(Instant timestamp) {
         if (customEpoch != null) {
-            ValiDsl.check(timestamp, _TimeUtilsGetDurationSinceCustomEpochArgumentsMeta.TIMESTAMP.name())
+            check(timestamp, _TimeUtilsGetDurationSinceCustomEpochArgumentsMeta.TIMESTAMP.name())
                     .notNull()
                     .constraint(instant -> !instant.isBefore(customEpoch), "must belong to custom Epoch");
         }

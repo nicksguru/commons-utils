@@ -115,7 +115,7 @@ public class ValiDslSteps2 {
     @When("the string length is validated to be between {int} and {int}")
     public void theStringLengthIsValidatedToBeBetween(int min, int max) {
         textWorld.setLastException(catchThrowable(() -> {
-            StringValidationContext context = ValiDsl.check(stringValue, "user.name");
+            StringValidationContext context = check(stringValue, "user.name");
             context.lengthBetweenInclusive(min, max);
         }));
     }
@@ -134,7 +134,7 @@ public class ValiDslSteps2 {
     @When("the integer is validated to be greater than {int}")
     public void theIntegerIsValidatedToBeGreaterThan(int threshold) {
         textWorld.setLastException(catchThrowable(() -> {
-            IntegerValidationContext context = ValiDsl.check(integerValue, "user.age");
+            IntegerValidationContext context = check(integerValue, "user.age");
             context.greaterThan(threshold);
         }));
     }
@@ -142,7 +142,7 @@ public class ValiDslSteps2 {
     @When("the integer is validated to be between {int} and {int}")
     public void theIntegerIsValidatedToBeBetween(int min, int max) {
         textWorld.setLastException(catchThrowable(() -> {
-            IntegerValidationContext context = ValiDsl.check(integerValue, "user.age");
+            IntegerValidationContext context = check(integerValue, "user.age");
             context.betweenInclusive(min, max);
         }));
     }
@@ -165,7 +165,7 @@ public class ValiDslSteps2 {
     @When("the collection size is validated to be between {int} and {int}")
     public void theCollectionSizeIsValidatedToBeBetween(int min, int max) {
         textWorld.setLastException(catchThrowable(() -> {
-            CollectionValidationContext<List<CollectionItem>> context = ValiDsl.check(collectionValue, "user.items");
+            CollectionValidationContext<List<CollectionItem>> context = check(collectionValue, "user.items");
             context.sizeBetweenInclusive(min, max);
         }));
     }
@@ -181,7 +181,7 @@ public class ValiDslSteps2 {
     @When("the double is validated to be between {double} and {double}")
     public void theDoubleIsValidatedToBeBetween(double min, double max) {
         textWorld.setLastException(catchThrowable(() -> {
-            DoubleValidationContext context = ValiDsl.check(doubleValue, "user.rate");
+            DoubleValidationContext context = check(doubleValue, "user.rate");
             context.betweenInclusive(min, max);
         }));
     }
@@ -189,7 +189,7 @@ public class ValiDslSteps2 {
     @When("the object is validated to be not null")
     public void theObjectIsValidatedToBeNotNull() {
         textWorld.setLastException(catchThrowable(() -> {
-            ValidationContext<Object> context = ValiDsl.check(genericObject, "user.data");
+            ValidationContext<Object> context = check(genericObject, "user.data");
             context.notNull();
         }));
     }
@@ -197,7 +197,7 @@ public class ValiDslSteps2 {
     @When("validations for not null and minimum length are chained")
     public void validationsForNotNullAndMinimumLengthAreChained() {
         textWorld.setLastException(catchThrowable(() -> {
-            StringValidationContext context = ValiDsl.check(stringValue, "user.name");
+            StringValidationContext context = check(stringValue, "user.name");
             context.notNull()
                     .longerThanOrEqual(2);
         }));
@@ -214,7 +214,7 @@ public class ValiDslSteps2 {
     @When("the string is validated with custom error message")
     public void theStringIsValidatedWithCustomErrorMessage() {
         textWorld.setLastException(catchThrowable(() -> {
-            StringValidationContext context = ValiDsl.check(stringValue, "user.name");
+            StringValidationContext context = check(stringValue, "user.name");
             context.constraint(s -> s != null && !s.isEmpty(), "Custom error: %s is empty");
         }));
     }

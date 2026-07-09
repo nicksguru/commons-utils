@@ -3,6 +3,7 @@ package guru.nicks.commons.utils.crypto;
 import guru.nicks.commons.utils.text.TextUtils;
 
 import am.ik.yavi.meta.ConstraintArguments;
+import jakarta.annotation.Nullable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Arrays;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
+import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
 /**
  *
@@ -393,9 +395,11 @@ public class DammChecksumUtils {
          *
          * @param payload payload to compute the check character for
          * @return check character strictly within the given alphabet
-         * @throws IllegalArgumentException if a character in the payload is not in the alphabet
+         * @throws IllegalArgumentException if payload is {@code null} or has characters not in the alphabet
          */
+        @ConstraintArguments
         public char compute(String payload) {
+            checkNotNull(payload, _DammChecksumUtils_ImplComputeArgumentsMeta.PAYLOAD.name());
             int interim = 0;
 
             for (int i = 0; i < payload.length(); i++) {
@@ -416,7 +420,7 @@ public class DammChecksumUtils {
          *
          * @param str string to validate (payload + checksum)
          */
-        public boolean isValid(String str) {
+        public boolean isValid(@Nullable String str) {
             // fail-fast: blank or no room for payload+checksum
             if (StringUtils.isBlank(str) || (str.length() < 2)) {
                 return false;

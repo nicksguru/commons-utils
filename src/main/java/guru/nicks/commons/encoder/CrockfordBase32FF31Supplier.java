@@ -24,13 +24,13 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
  * <b>hide the original number</b> (e.g., the number of shop orders). Here are a few estimates (big shops have around
  * 350 million products and 1.5 billion orders a year):
  * <ul>
- *  <li>1 character encodes numbers up to 31 (32^1 - 1 = 31 = z)</li>
- *  <li>2 characters encode numbers up to 1 thousand (32^2 - 1 = 1 023 = zz)</li>
- *  <li>3 characters encode numbers up to ≈32 thousand (32^3 - 1 = 32 767 = zzz)</li>
- *  <li>4 characters encode numbers up to ≈1 million (32^4 - 1 = 1 048 575 = zzzz)</li>
- *  <li>5 characters encode numbers up to ≈33 million (32^5 - 1 = 33 554 431 = zzzzz)</li>
- *  <li>6 characters encode numbers up to ≈1 billion (32^6 - 1 = 1 073 741 823 = zzzzzz)</li>
- *  <li>7 characters encode numbers up to ≈34 billion (32^7 - 1 = 34 359 738 367 = zzzzzzz)</li>
+ *  <li>1 character encodes numbers up to 31 (32^1 - 1 = 31 = Z)</li>
+ *  <li>2 characters encode numbers up to 1 thousand (32^2 - 1 = 1 023 = ZZ)</li>
+ *  <li>3 characters encode numbers up to ≈32 thousand (32^3 - 1 = 32 767 = ZZZ)</li>
+ *  <li>4 characters encode numbers up to ≈1 million (32^4 - 1 = 1 048 575 = ZZZZ)</li>
+ *  <li>5 characters encode numbers up to ≈33 million (32^5 - 1 = 33 554 431 = ZZZZZ)</li>
+ *  <li>6 characters encode numbers up to ≈1 billion (32^6 - 1 = 1 073 741 823 = ZZZZZZ)</li>
+ *  <li>7 characters encode numbers up to ≈34 billion (32^7 - 1 = 34 359 738 367 = ZZZZZZZ)</li>
  * </ul>
  *
  * @see CrockfordBase32ChecksumValidator
@@ -47,10 +47,9 @@ public abstract class CrockfordBase32FF31Supplier implements Supplier<String> {
     protected CrockfordBase32FF31Supplier(LongSupplier nextValueSupplier, int leftPadPositions,
             byte[] key, byte[] tweak) {
         checkNotNull(nextValueSupplier, _CrockfordBase32FF31SupplierArgumentsMeta.NEXTVALUESUPPLIER.name());
-        var base32Encoder = new CrockfordBase32SequenceEncoder();
 
         sequenceEncryptor = FpeUtils.createFf31SequenceEncryptor(
-                () -> base32Encoder.encode(nextValueSupplier.getAsLong()),
+                () -> CrockfordBase32SequenceEncoder.INSTANCE.encode(nextValueSupplier.getAsLong()),
                 TextUtils.CROCKFORD_BASE32_ALPHABET,
                 leftPadPositions, '0',
                 key, tweak);

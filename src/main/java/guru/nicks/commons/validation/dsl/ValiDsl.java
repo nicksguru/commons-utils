@@ -65,11 +65,31 @@ public class ValiDsl {
     }
 
     /**
+     * Speeds up one of less common use case for strings (requiring a non-empty string and returning it upon success).
+     * Doesn't permit method chaining (doesn't create a {@link StringValidationContext}), thus reducing GC pressure.
+     *
+     * @param value value to validate
+     * @param name  field name
+     * @return non-empty value
+     * @throws IllegalArgumentException the value is {@code null} or empty (whitespaces-only strings are OK)
+     * @see StringValidationContext#notEmpty()
+     */
+    public static String checkNotEmpty(@Nullable String value, String name) {
+        if (StringUtils.isEmpty(value)) {
+            String message = ValidationMessage.NOT_EMPTY.format(name);
+            throw new IllegalArgumentException(message);
+        }
+
+        return value;
+    }
+
+    /**
      * Speeds up the most common use case for strings (requiring a non-blank string and returning it upon success).
      * Doesn't permit method chaining (doesn't create a {@link StringValidationContext}), thus reducing GC pressure.
      *
      * @param value value to validate
      * @param name  field name
+     * @return non-blank value
      * @throws IllegalArgumentException the value is {@code null}, or empty, or whitespaces-only
      * @see StringValidationContext#notBlank()
      */

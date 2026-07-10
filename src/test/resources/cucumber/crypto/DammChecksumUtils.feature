@@ -155,12 +155,14 @@ Feature: DammChecksumUtils
   Scenario: Handle invalid character in decimal payload
     Given a payload with invalid character "12A34"
     When Damm checksum is computed using DECIMAL implementation
-    Then an exception should be thrown
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "not in alphabet"
 
   Scenario: Handle invalid character in Crockford Base32 payload
     Given a payload with invalid character "12I34"
     When Damm checksum is computed using CROCKFORD_BASE32 implementation
-    Then an exception should be thrown
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "not in alphabet"
 
   Scenario: Validate value with invalid character using DECIMAL
     Given a value with invalid character "12A34"
@@ -175,12 +177,14 @@ Feature: DammChecksumUtils
   Scenario: Compute checksum for empty decimal payload
     Given an empty payload
     When Damm checksum is computed using DECIMAL implementation
-    Then the checksum character should be "0"
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "payload must not be empty"
 
   Scenario: Compute checksum for empty Crockford Base32 payload
     Given an empty payload
     When Damm checksum is computed using CROCKFORD_BASE32 implementation
-    Then the checksum character should be "0"
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "payload must not be empty"
 
   Scenario Outline: Verify checksum is deterministic for decimal
     Given a payload "<Payload>"
@@ -318,7 +322,8 @@ Feature: DammChecksumUtils
   Scenario: Handle invalid character in alphanumeric payload
     Given a payload with invalid character "12@34"
     When Damm checksum is computed using ALPHANUMERIC implementation
-    Then an exception should be thrown
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "not in alphabet"
 
   Scenario: Validate value with invalid character using ALPHANUMERIC
     Given a value with invalid character "12@34"
@@ -328,7 +333,8 @@ Feature: DammChecksumUtils
   Scenario: Compute checksum for empty alphanumeric payload
     Given an empty payload
     When Damm checksum is computed using ALPHANUMERIC implementation
-    Then the checksum character should be "0"
+    Then the exception should be of type "IllegalArgumentException"
+    And the exception message should contain "payload must not be empty"
 
   Scenario Outline: Verify checksum is deterministic for alphanumeric
     Given a payload "<Payload>"

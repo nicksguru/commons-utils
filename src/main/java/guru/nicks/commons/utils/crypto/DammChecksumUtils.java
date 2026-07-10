@@ -12,7 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Arrays;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
-import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
+import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotEmpty;
 
 /**
  *
@@ -377,7 +377,7 @@ public class DammChecksumUtils {
 
             Arrays.fill(charIndexesInAlphabet, -1);
             // for each character in the alphabet, store its index
-            for (int i = 0; i < alphabet.length(); i++) {
+            for (int i = 0, n = alphabet.length(); i < n; i++) {
                 char chr = alphabet.charAt(i);
 
                 if (chr > 255) {
@@ -395,11 +395,12 @@ public class DammChecksumUtils {
          *
          * @param payload payload to compute the check character for
          * @return check character strictly within the given alphabet
-         * @throws IllegalArgumentException if payload is {@code null} or has characters not in the alphabet
+         * @throws IllegalArgumentException if payload is {@code null}, or empty (whitespaces-only are OK if the
+         *                                  whitespace is part of the alphabet), or has characters not in the alphabet
          */
         @ConstraintArguments
         public char compute(String payload) {
-            checkNotNull(payload, _DammChecksumUtils_ImplComputeArgumentsMeta.PAYLOAD.name());
+            checkNotEmpty(payload, _DammChecksumUtils_ImplComputeArgumentsMeta.PAYLOAD.name());
             int interim = 0;
 
             for (int i = 0; i < payload.length(); i++) {

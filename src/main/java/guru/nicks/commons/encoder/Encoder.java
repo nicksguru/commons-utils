@@ -25,8 +25,9 @@ public interface Encoder<T> {
     T decode(String value);
 
     /**
-     * Returns {@code true} if sort order of strings after encoding is the same as that of the original numbers. For
-     * example, Base58, Crockford's Base32, Base23hex do that; Base32 does not - it has digits after letters.
+     * Returns {@code true} if sort order of strings after encoding is the same as that of the original numbers. Base58,
+     * Crockford's Base32, Base23hex do that; Base32 does not - its alphabet stores digits (smaller ASCII codes) after
+     * letters (greater ASCII codes).
      *
      * @return default implementation returns {@code false}
      */

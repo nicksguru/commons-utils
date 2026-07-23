@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * When used in {@code @ConfigurationProperties}, immutability doesn't work because this class has subclasses (the
+ * When used in {@code @ConfigurationProperties}, immutability doesn't work because this class may have subclasses (the
  * configuration processor gets confused somehow).
  */
 @Data
@@ -44,16 +44,20 @@ public class BasicAuthCredentials {
     }
 
     /**
+     * Checks if the {@link #getPassword() password} is not blank.
+     *
+     * @return {@code true} if password is not blank
+     */
+    public boolean hasPassword() {
+        return StringUtils.isNotBlank(password);
+    }
+
+    /**
      * Converts the username and password to Basic Auth header value (with {@value #BASIC_AUTH_PREFIX} prepended).
      *
-     * @return prefix plus Base64-encoded string in the format "username:password"
-     * @throws IllegalArgumentException username and/or password is blank
+     * @return prefix plus Base64-encoded string in the format "username:password" where each component is optional
      */
     public String convertToHeaderValue() {
-        if (StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
-            throw new IllegalArgumentException("Username and password must not be blank");
-        }
-
         String credentials = username + ":" + password;
 
         credentials = Base64.getEncoder().encodeToString(

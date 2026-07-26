@@ -83,8 +83,6 @@ public class TransformUtils {
             return new ArrayList<>();
         }
 
-        checkNotNull(mapper, "mapper");
-
         return createStream(from)
                 .map(mapper)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -108,8 +106,6 @@ public class TransformUtils {
      */
     public static <T, R, U> List<U> toList(@Nullable Iterable<T> from,
             Function<? super T, R> mapper1, Function<? super R, U> mapper2) {
-        checkNotNull(mapper1, "mapper1");
-        checkNotNull(mapper2, "mapper2");
         return toList(from, mapper1.andThen(mapper2));
     }
 
@@ -129,9 +125,6 @@ public class TransformUtils {
      */
     public static <T, R, U, V> List<V> toList(@Nullable Iterable<T> from,
             Function<? super T, R> mapper1, Function<? super R, U> mapper2, Function<? super U, V> mapper3) {
-        checkNotNull(mapper1, "mapper1");
-        checkNotNull(mapper2, "mapper2");
-        checkNotNull(mapper3, "mapper3");
         return toList(from, mapper1.andThen(mapper2).andThen(mapper3));
     }
 
@@ -151,8 +144,6 @@ public class TransformUtils {
         if (from == null) {
             return new LinkedHashSet<>();
         }
-
-        checkNotNull(mapper, "mapper");
 
         return createStream(from)
                 .map(mapper)
@@ -178,8 +169,6 @@ public class TransformUtils {
      */
     public static <T, R, U> Set<U> toSet(@Nullable Iterable<T> from,
             Function<? super T, R> mapper1, Function<? super R, U> mapper2) {
-        checkNotNull(mapper1, "mapper1");
-        checkNotNull(mapper2, "mapper2");
         return toSet(from, mapper1.andThen(mapper2));
     }
 
@@ -200,9 +189,6 @@ public class TransformUtils {
      */
     public static <T, R, U, V> Set<V> toSet(@Nullable Iterable<T> from,
             Function<? super T, R> mapper1, Function<? super R, U> mapper2, Function<? super U, V> mapper3) {
-        checkNotNull(mapper1, "mapper1");
-        checkNotNull(mapper2, "mapper2");
-        checkNotNull(mapper3, "mapper3");
         return toSet(from, mapper1.andThen(mapper2).andThen(mapper3));
     }
 
@@ -238,8 +224,6 @@ public class TransformUtils {
             return new HashMap<>();
         }
 
-        checkNotNull(keyExtractor, "keyExtractor");
-        checkNotNull(valueExtractor, "valueExtractor");
         return createStream(from).collect(
                 Collectors.toMap(keyExtractor, valueExtractor));
     }

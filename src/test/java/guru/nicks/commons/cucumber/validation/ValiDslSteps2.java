@@ -23,7 +23,6 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -216,16 +215,6 @@ public class ValiDslSteps2 {
         textWorld.setLastException(catchThrowable(() -> {
             StringValidationContext context = check(stringValue, "user.name");
             context.constraint(s -> s != null && !s.isEmpty(), "Custom error: %s is empty");
-        }));
-    }
-
-    @When("the string is validated with a delegate validator")
-    public void theStringIsValidatedWithADelegateValidator() {
-        textWorld.setLastException(catchThrowable(() -> {
-            Consumer<StringValidationContext> lengthValidator = ctx -> ctx.longerThanOrEqual(2);
-
-            StringValidationContext context = check(stringValue, "user.name").notNull();
-            context.constraint(lengthValidator);
         }));
     }
 

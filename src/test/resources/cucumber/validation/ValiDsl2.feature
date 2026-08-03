@@ -154,16 +154,6 @@ Feature: ValiDsl
     When the string is validated with custom error message
     Then the validation should fail with message "Custom error: user.name is empty"
 
-  Scenario: Delegate validator validation
-    Given a string value "test"
-    When the string is validated with a delegate validator
-    Then the validation should pass
-
-  Scenario: Delegate validator failure validation
-    Given a string value "a"
-    When the string is validated with a delegate validator
-    Then the validation should fail with message "user.name length must be greater than or equal to 2"
-
   Scenario: Complex chained validations
     Given a string value "test123"
     When the string is validated with complex chained validations

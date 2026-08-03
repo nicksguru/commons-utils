@@ -3,7 +3,6 @@ package guru.nicks.commons.validation.dsl;
 import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -24,17 +23,6 @@ public class StringValidationContext extends ValidationContext<String> {
     @Override // enforce return value type
     public StringValidationContext constraint(Predicate<? super String> predicate, @Nullable String messageTemplate) {
         return (StringValidationContext) super.constraint(predicate, messageTemplate);
-    }
-
-    /**
-     * Delegates validation to the given validator.
-     *
-     * @param validator validator
-     * @return {@code this}
-     */
-    public StringValidationContext constraint(Consumer<? super StringValidationContext> validator) {
-        validator.accept(this);
-        return this;
     }
 
     /**

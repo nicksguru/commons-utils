@@ -175,6 +175,39 @@ Feature: StringValidationContext
       | bar baz    | should fail with message "user.name must contain 'foo'" |
       | barFOO baz | should fail with message "user.name must contain 'foo'" |
 
+  # 13a. startsWith(String) argument validation
+  Scenario: startsWith rejects null prefix
+    Given the string value is "hello"
+    When the string is checked with startsWith "null"
+    Then the check should fail with message "prefix must not be null or empty"
+
+  Scenario: startsWith rejects empty prefix
+    Given the string value is "hello"
+    When the string is checked with startsWith ""
+    Then the check should fail with message "prefix must not be null or empty"
+
+  # 12a. endsWith(String) argument validation
+  Scenario: endsWith rejects null suffix
+    Given the string value is "hello"
+    When the string is checked with endsWith "null"
+    Then the check should fail with message "suffix must not be null or empty"
+
+  Scenario: endsWith rejects empty suffix
+    Given the string value is "hello"
+    When the string is checked with endsWith ""
+    Then the check should fail with message "suffix must not be null or empty"
+
+  # 13b. contains(String) argument validation
+  Scenario: contains rejects null substring
+    Given the string value is "hello"
+    When the string is checked with contains "null"
+    Then the check should fail with message "substring must not be null or empty"
+
+  Scenario: contains rejects empty substring
+    Given the string value is "hello"
+    When the string is checked with contains ""
+    Then the check should fail with message "substring must not be null or empty"
+
   # 14. Method chaining
   Scenario: Chained validations all pass without throwing
     Given the string value is "hello"

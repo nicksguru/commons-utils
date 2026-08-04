@@ -149,36 +149,51 @@ public class StringValidationContextSteps {
     }
 
     /**
-     * Runs {@link StringValidationContext#startsWith(String)}.
+     * Runs {@link StringValidationContext#startsWith(String)}. The literal {@code "null"} marker is
+     * converted to Java {@code null} so that null-argument rejection can be exercised.
      *
-     * @param prefix expected prefix
+     * @param prefix expected prefix (or the {@code null} marker)
      */
     @When("the string is checked with startsWith {string}")
     public void theStringIsCheckedWithStartsWith(String prefix) {
+        // treat the literal marker as Java null
+        var resolved = NULL_MARKER.equals(prefix)
+                ? null
+                : prefix;
         textWorld.setLastException(catchThrowable(() ->
-                check(stringValue, FIELD_NAME).startsWith(prefix)));
+                check(stringValue, FIELD_NAME).startsWith(resolved)));
     }
 
     /**
-     * Runs {@link StringValidationContext#endsWith(String)}.
+     * Runs {@link StringValidationContext#endsWith(String)}. The literal {@code "null"} marker is
+     * converted to Java {@code null} so that null-argument rejection can be exercised.
      *
-     * @param suffix expected suffix
+     * @param suffix expected suffix (or the {@code null} marker)
      */
     @When("the string is checked with endsWith {string}")
     public void theStringIsCheckedWithEndsWith(String suffix) {
+        // treat the literal marker as Java null
+        var resolved = NULL_MARKER.equals(suffix)
+                ? null
+                : suffix;
         textWorld.setLastException(catchThrowable(() ->
-                check(stringValue, FIELD_NAME).endsWith(suffix)));
+                check(stringValue, FIELD_NAME).endsWith(resolved)));
     }
 
     /**
-     * Runs {@link StringValidationContext#contains(String)}.
+     * Runs {@link StringValidationContext#contains(String)}. The literal {@code "null"} marker is
+     * converted to Java {@code null} so that null-argument rejection can be exercised.
      *
-     * @param substring expected substring
+     * @param substring expected substring (or the {@code null} marker)
      */
     @When("the string is checked with contains {string}")
     public void theStringIsCheckedWithContains(String substring) {
+        // treat the literal marker as Java null
+        var resolved = NULL_MARKER.equals(substring)
+                ? null
+                : substring;
         textWorld.setLastException(catchThrowable(() ->
-                check(stringValue, FIELD_NAME).contains(substring)));
+                check(stringValue, FIELD_NAME).contains(resolved)));
     }
 
     /**

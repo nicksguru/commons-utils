@@ -113,11 +113,15 @@ public class StringValidationContext extends ValidationContext<String> {
     /**
      * Checks that the string is not null and starts with the given prefix (case-sensitive).
      *
-     * @param prefix prefix
+     * @param prefix prefix; must not be null or empty
      * @return {@code this}
-     * @throws IllegalArgumentException condition not met
+     * @throws IllegalArgumentException prefix is null/empty or condition not met
      */
     public StringValidationContext startsWith(String prefix) {
+        if (StringUtils.isEmpty(prefix)) {
+            throw new IllegalArgumentException("prefix must not be null or empty");
+        }
+
         notNullAnd(value -> value.startsWith(prefix), ValidationMessage.STARTS_WITH, prefix);
         return this;
     }
@@ -125,11 +129,15 @@ public class StringValidationContext extends ValidationContext<String> {
     /**
      * Checks that the string is not null and ends with the given suffix (case-sensitive).
      *
-     * @param suffix suffix
+     * @param suffix suffix; must not be null or empty
      * @return {@code this}
-     * @throws IllegalArgumentException condition not met
+     * @throws IllegalArgumentException suffix is null/empty or condition not met
      */
     public StringValidationContext endsWith(String suffix) {
+        if (StringUtils.isEmpty(suffix)) {
+            throw new IllegalArgumentException("suffix must not be null or empty");
+        }
+
         notNullAnd(value -> value.endsWith(suffix), ValidationMessage.ENDS_WITH, suffix);
         return this;
     }
@@ -137,11 +145,15 @@ public class StringValidationContext extends ValidationContext<String> {
     /**
      * Checks that the string is not null and contains with the given substring (case-sensitive).
      *
-     * @param substring substring
+     * @param substring substring; must not be null or empty
      * @return {@code this}
-     * @throws IllegalArgumentException condition not met
+     * @throws IllegalArgumentException substring is null/empty or condition not met
      */
     public StringValidationContext contains(String substring) {
+        if (StringUtils.isEmpty(substring)) {
+            throw new IllegalArgumentException("substring must not be null or empty");
+        }
+
         notNullAnd(value -> value.contains(substring), ValidationMessage.CONTAINS, substring);
         return this;
     }

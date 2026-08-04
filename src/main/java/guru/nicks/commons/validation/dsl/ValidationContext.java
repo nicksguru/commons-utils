@@ -7,8 +7,10 @@ import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
-import java.util.Objects;
+import java.util.Locale;
 import java.util.function.Predicate;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Validation context. It's immutable and designed for method chaining: each method - including subclasses - must return
@@ -74,7 +76,7 @@ public class ValidationContext<T> {
      * @throws IllegalArgumentException the predicate returned {@code false}
      */
     public ValidationContext<T> constraint(Predicate<? super T> predicate, @Nullable String messageTemplate) {
-        Objects.requireNonNull(predicate, "predicate");
+        requireNonNull(predicate, "predicate");
 
         if (predicate.test(value)) {
             return this;
@@ -89,7 +91,8 @@ public class ValidationContext<T> {
             messageTemplate = ValidationMessage.DECORATED_NAME_PLACEHOLDER + " " + messageTemplate;
         }
 
-        throw new IllegalArgumentException(String.format(messageTemplate, name, value));
+        // locale is needed to format numbers in a unified way
+        throw new IllegalArgumentException(String.format(Locale.US, messageTemplate, name, value));
     }
 
     /**
@@ -100,7 +103,7 @@ public class ValidationContext<T> {
      * @param message     error message template
      * @param messageArgs arguments for the message template ({@link #getName()} is prepended implicitly)
      */
-    protected void checkNotNull(Predicate<? super T> predicate, ValidationMessage message, Object... messageArgs) {
+    protected void notNullAnd(Predicate<? super T> predicate, ValidationMessage message, Object... messageArgs) {
         notNull();
 
         if (!predicate.test(value)) {

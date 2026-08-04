@@ -48,7 +48,7 @@ public class CollectionValidationContext<T extends Collection<?>> extends Valida
      * @throws IllegalArgumentException condition not met
      */
     public CollectionValidationContext<T> sizeLessThan(int threshold) {
-        checkNotNull(value -> value.size() < threshold, ValidationMessage.SIZE_LESS_THAN, threshold);
+        notNullAnd(value -> value.size() < threshold, ValidationMessage.SIZE_LESS_THAN, threshold);
         return this;
     }
 
@@ -60,7 +60,7 @@ public class CollectionValidationContext<T extends Collection<?>> extends Valida
      * @throws IllegalArgumentException condition not met
      */
     public CollectionValidationContext<T> sizeLessThanOrEqual(int threshold) {
-        checkNotNull(value -> value.size() <= threshold, ValidationMessage.SIZE_LESS_THAN_OR_EQUAL, threshold);
+        notNullAnd(value -> value.size() <= threshold, ValidationMessage.SIZE_LESS_THAN_OR_EQUAL, threshold);
         return this;
     }
 
@@ -72,7 +72,7 @@ public class CollectionValidationContext<T extends Collection<?>> extends Valida
      * @throws IllegalArgumentException condition not met
      */
     public CollectionValidationContext<T> sizeGreaterThan(int threshold) {
-        checkNotNull(value -> value.size() > threshold, ValidationMessage.SIZE_GREATER_THAN, threshold);
+        notNullAnd(value -> value.size() > threshold, ValidationMessage.SIZE_GREATER_THAN, threshold);
         return this;
     }
 
@@ -84,7 +84,7 @@ public class CollectionValidationContext<T extends Collection<?>> extends Valida
      * @throws IllegalArgumentException condition not met
      */
     public CollectionValidationContext<T> sizeGreaterThanOrEqual(int threshold) {
-        checkNotNull(value -> value.size() >= threshold, ValidationMessage.SIZE_GREATER_THAN_OR_EQUAL, threshold);
+        notNullAnd(value -> value.size() >= threshold, ValidationMessage.SIZE_GREATER_THAN_OR_EQUAL, threshold);
         return this;
     }
 
@@ -97,7 +97,7 @@ public class CollectionValidationContext<T extends Collection<?>> extends Valida
      * @throws IllegalArgumentException condition not met
      */
     public CollectionValidationContext<T> sizeBetweenInclusive(int min, int max) {
-        checkNotNull(value -> (value.size() >= min) && (value.size() <= max),
+        notNullAnd(value -> (value.size() >= min) && (value.size() <= max),
                 ValidationMessage.SIZE_BETWEEN_INCLUSIVE, min, max);
 
         return this;

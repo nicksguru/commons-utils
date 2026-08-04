@@ -29,6 +29,10 @@ public enum ValidationMessage {
     LENGTH_GREATER_THAN_OR_EQUAL("length must be greater than or equal to %d"),
     //
     LENGTH_BETWEEN_INCLUSIVE("length must be between %d and %d (inclusive)"),
+    //
+    STARTS_WITH("must start with '%s'"),
+    ENDS_WITH("must end with '%s'"),
+    CONTAINS("must contain '%s'"),
 
     /**
      * For collections only.
@@ -75,12 +79,14 @@ public enum ValidationMessage {
     }
 
     /**
-     * Formats the message with the given arguments. The first argument is always the field name being validated.
+     * Formats the message with the given arguments and {@link Locale#US} (for representing numbers in a unified way).
+     * The first argument is always the field name being validated.
      *
      * @param args optional arguments for the message template (if the specific template needs them)
      * @return the formatted message
      */
     public String format(Object... args) {
+        // locale is needed to format numbers in a unified way
         return String.format(Locale.US, template, args);
     }
 

@@ -32,7 +32,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext notEmpty() {
-        checkNotNull(StringUtils::isNotEmpty, ValidationMessage.NOT_EMPTY);
+        notNullAnd(StringUtils::isNotEmpty, ValidationMessage.NOT_EMPTY);
         return this;
     }
 
@@ -43,7 +43,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext notBlank() {
-        checkNotNull(StringUtils::isNotBlank, ValidationMessage.NOT_BLANK);
+        notNullAnd(StringUtils::isNotBlank, ValidationMessage.NOT_BLANK);
         return this;
     }
 
@@ -55,7 +55,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext shorterThan(int threshold) {
-        checkNotNull(value -> value.length() < threshold, ValidationMessage.LENGTH_LESS_THAN, threshold);
+        notNullAnd(value -> value.length() < threshold, ValidationMessage.LENGTH_LESS_THAN, threshold);
         return this;
     }
 
@@ -67,7 +67,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext shorterThanOrEqual(int threshold) {
-        checkNotNull(value -> value.length() <= threshold, ValidationMessage.LENGTH_LESS_THAN_OR_EQUAL, threshold);
+        notNullAnd(value -> value.length() <= threshold, ValidationMessage.LENGTH_LESS_THAN_OR_EQUAL, threshold);
         return this;
     }
 
@@ -79,7 +79,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext longerThan(int threshold) {
-        checkNotNull(value -> value.length() > threshold, ValidationMessage.LENGTH_GREATER_THAN, threshold);
+        notNullAnd(value -> value.length() > threshold, ValidationMessage.LENGTH_GREATER_THAN, threshold);
         return this;
     }
 
@@ -91,7 +91,7 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext longerThanOrEqual(int threshold) {
-        checkNotNull(value -> value.length() >= threshold, ValidationMessage.LENGTH_GREATER_THAN_OR_EQUAL,
+        notNullAnd(value -> value.length() >= threshold, ValidationMessage.LENGTH_GREATER_THAN_OR_EQUAL,
                 threshold);
         return this;
     }
@@ -105,8 +105,44 @@ public class StringValidationContext extends ValidationContext<String> {
      * @throws IllegalArgumentException condition not met
      */
     public StringValidationContext lengthBetweenInclusive(int min, int max) {
-        checkNotNull(value -> (value.length() >= min) && (value.length() <= max),
+        notNullAnd(value -> (value.length() >= min) && (value.length() <= max),
                 ValidationMessage.LENGTH_BETWEEN_INCLUSIVE, min, max);
+        return this;
+    }
+
+    /**
+     * Checks that the string is not null and starts with the given prefix (case-sensitive).
+     *
+     * @param prefix prefix
+     * @return {@code this}
+     * @throws IllegalArgumentException condition not met
+     */
+    public StringValidationContext startsWith(String prefix) {
+        notNullAnd(value -> value.startsWith(prefix), ValidationMessage.STARTS_WITH, prefix);
+        return this;
+    }
+
+    /**
+     * Checks that the string is not null and ends with the given suffix (case-sensitive).
+     *
+     * @param suffix suffix
+     * @return {@code this}
+     * @throws IllegalArgumentException condition not met
+     */
+    public StringValidationContext endsWith(String suffix) {
+        notNullAnd(value -> value.endsWith(suffix), ValidationMessage.ENDS_WITH, suffix);
+        return this;
+    }
+
+    /**
+     * Checks that the string is not null and contains with the given substring (case-sensitive).
+     *
+     * @param substring substring
+     * @return {@code this}
+     * @throws IllegalArgumentException condition not met
+     */
+    public StringValidationContext contains(String substring) {
+        notNullAnd(value -> value.contains(substring), ValidationMessage.CONTAINS, substring);
         return this;
     }
 

@@ -28,13 +28,13 @@ import java.util.function.Function;
 public interface BusinessExceptionProvider {
 
     /**
-     * Returns a function that creates instances of the exception class mapped to this error code. Default
-     * implementation calls {@link ExceptionUtils#getExceptionFactory(Class)} for {@link #getExceptionClass()}.
+     * Returns a function that creates instances of {@link #getExceptionClass()}. Default implementation calls
+     * {@link ExceptionUtils#getBusinessExceptionFactory(Class)}.
      *
      * @return a function that accepts a cause ({@link Throwable}) and creates instances of the exception class
      */
-    default Function<Throwable, Exception> getExceptionFactory() {
-        return ExceptionUtils.getExceptionFactory(getExceptionClass());
+    default Function<Throwable, BusinessException> getExceptionFactory() {
+        return ExceptionUtils.getBusinessExceptionFactory(getExceptionClass());
     }
 
     /**
@@ -63,7 +63,7 @@ public interface BusinessExceptionProvider {
      * @throws IllegalStateException error invoking a constructor accepting a {@link Throwable}
      */
     default BusinessException toException(@Nullable Throwable cause) {
-        return (BusinessException) getExceptionFactory().apply(cause);
+        return getExceptionFactory().apply(cause);
     }
 
 }

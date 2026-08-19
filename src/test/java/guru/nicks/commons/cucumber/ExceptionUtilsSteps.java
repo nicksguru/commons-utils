@@ -1,6 +1,10 @@
 package guru.nicks.commons.cucumber;
 
+import guru.nicks.commons.cucumber.exception.NoCauseConstructorException;
+import guru.nicks.commons.cucumber.exception.TestBusinessException;
+import guru.nicks.commons.cucumber.exception.TestErrorCode.NoThrowableConstructorException;
 import guru.nicks.commons.cucumber.world.TextWorld;
+import guru.nicks.commons.exception.BusinessException;
 import guru.nicks.commons.utils.ExceptionUtils;
 
 import io.cucumber.java.en.And;
@@ -11,6 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -21,10 +30,38 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 @RequiredArgsConstructor
 public class ExceptionUtilsSteps {
 
+    /**
+     * Exception classes resolvable by their simple names in feature files (for the exception factory).
+     */
+    private static final Map<String, Class<? extends Exception>> FACTORY_EXCEPTION_CLASSES = Map.of(
+            "IllegalStateException", IllegalStateException.class,
+            "NoCauseConstructorException", NoCauseConstructorException.class);
+
+    /**
+     * Business exception classes resolvable by their simple names in feature files (for the business exception
+     * factory), including a fixture violating the constructor requirement on purpose.
+     */
+    private static final Map<String, Class<? extends BusinessException>> FACTORY_BUSINESS_EXCEPTION_CLASSES = Map.of(
+            "TestBusinessException", TestBusinessException.class,
+            "NoThrowableConstructorException", NoThrowableConstructorException.class);
+
     // DI
     private final TextWorld textWorld;
 
     private Throwable testException;
+
+    private Throwable originalCause;
+    private Throwable unwrappedException;
+    private List<Throwable> wrapperChain;
+
+    private Class<? extends Exception> exceptionFactoryClass;
+    private Class<? extends BusinessException> businessExceptionFactoryClass;
+
+    private Function<Throwable, Exception> exceptionFactory;
+    private Function<Throwable, Exception> anotherExceptionFactory;
+    private Function<Throwable, BusinessException> businessExceptionFactory;
+    private Function<Throwable, BusinessException> anotherBusinessExceptionFactory;
+    private Throwable factoryCreatedException;
 
     @Given("an exception of type {string} with message {string} is created")
     public void anExceptionOfTypeWithMessageIsCreated(String exceptionType, String message) {
@@ -186,6 +223,219 @@ public class ExceptionUtilsSteps {
 
             default -> throw new IllegalArgumentException("Invalid should contain value: '" + shouldContain + "'");
         }
+    }
+
+    @Given("exception root cause is the exception itself")
+    public void exceptionRootCauseIsTheExceptionItself() {
+        // Apache Commons Lang returns the exception itself as its root cause when no cause is set
+        testException = new IllegalStateException("Self-rooted");
+    }
+
+    /**
+     * Wraps the current exception into the given number of nested {@link InvocationTargetException}'s, keeping the
+     * whole chain (outermost first) to assert the unwrapping depth limit.
+     *
+     * @param depth number of nested wrappers
+     */
+    @Given("the exception is wrapped in {int} nested InvocationTargetExceptions")
+    public void theExceptionIsWrappedInNestedInvocationTargetExceptions(int depth) {
+        originalCause = testException;
+        wrapperChain = new ArrayList<>(List.of(testException));
+
+        for (int i = 0; i < depth; i++) {
+            testException = new InvocationTargetException(testException);
+            wrapperChain.addFirst(testException);
+        }
+    }
+
+    @Given("the exception is wrapped in an InvocationTargetException without a target")
+    public void theExceptionIsWrappedInAnInvocationTargetExceptionWithoutATarget() {
+        // the no-arg constructor is protected, but the public two-arg one accepts a null target
+        testException = new InvocationTargetException(null, "without a target");
+    }
+
+    @Given("an original cause exception is created")
+    public void anOriginalCauseExceptionIsCreated() {
+        originalCause = new IllegalStateException("Original cause");
+    }
+
+    @When("the exception is unwrapped from InvocationTargetException")
+    public void theExceptionIsUnwrappedFromInvocationTargetException() {
+        unwrappedException = ExceptionUtils.unwrapInvocationTargetException(testException);
+    }
+
+    @When("an exception factory is obtained for the {word} class")
+    public void anExceptionFactoryIsObtainedForTheClass(String exceptionSimpleName) {
+        exceptionFactoryClass = resolveExceptionFactoryClass(exceptionSimpleName);
+
+        textWorld.setLastException(catchThrowable(() ->
+                exceptionFactory = ExceptionUtils.getExceptionFactory(exceptionFactoryClass)));
+    }
+
+    @When("the exception factory is obtained again")
+    public void theExceptionFactoryIsObtainedAgain() {
+        textWorld.setLastException(catchThrowable(() ->
+                anotherExceptionFactory = ExceptionUtils.getExceptionFactory(exceptionFactoryClass)));
+    }
+
+    @When("the exception factory is applied to the original cause")
+    public void theExceptionFactoryIsAppliedToTheOriginalCause() {
+        textWorld.setLastException(catchThrowable(() ->
+                factoryCreatedException = exceptionFactory.apply(originalCause)));
+    }
+
+    @When("a business exception factory is obtained for the {word} class")
+    public void aBusinessExceptionFactoryIsObtainedForTheClass(String exceptionSimpleName) {
+        businessExceptionFactoryClass = resolveBusinessExceptionFactoryClass(exceptionSimpleName);
+
+        textWorld.setLastException(catchThrowable(() ->
+                businessExceptionFactory = ExceptionUtils.getBusinessExceptionFactory(businessExceptionFactoryClass)));
+    }
+
+    @When("the business exception factory is obtained again")
+    public void theBusinessExceptionFactoryIsObtainedAgain() {
+        textWorld.setLastException(catchThrowable(() ->
+                anotherBusinessExceptionFactory = ExceptionUtils.getBusinessExceptionFactory(
+                        businessExceptionFactoryClass)));
+    }
+
+    @When("the business exception factory is applied to the original cause")
+    public void theBusinessExceptionFactoryIsAppliedToTheOriginalCause() {
+        textWorld.setLastException(catchThrowable(() ->
+                factoryCreatedException = businessExceptionFactory.apply(originalCause)));
+    }
+
+    @Then("the unwrapped exception should be the exception itself")
+    public void theUnwrappedExceptionShouldBeTheExceptionItself() {
+        assertThat(unwrappedException)
+                .as("unwrapped exception")
+                .isSameAs(testException);
+    }
+
+    @Then("the unwrapped exception should be the original cause")
+    public void theUnwrappedExceptionShouldBeTheOriginalCause() {
+        assertThat(unwrappedException)
+                .as("unwrapped exception")
+                .isSameAs(originalCause);
+    }
+
+    @Then("the unwrapped exception should not be the original cause")
+    public void theUnwrappedExceptionShouldNotBeTheOriginalCause() {
+        assertThat(unwrappedException)
+                .as("unwrapped exception")
+                .isNotSameAs(originalCause);
+    }
+
+    @Then("the unwrapped exception should be an InvocationTargetException")
+    public void theUnwrappedExceptionShouldBeAnInvocationTargetException() {
+        assertThat(unwrappedException)
+                .as("unwrapped exception")
+                .isInstanceOf(InvocationTargetException.class);
+    }
+
+    /**
+     * The chain is limited to 100 unwrappings, so deeper chains stop at the exception reached after 100 unwrappings.
+     *
+     * @param depth expected number of performed unwrappings
+     */
+    @Then("the unwrapped exception should be the exception at unwrapping depth {int}")
+    public void theUnwrappedExceptionShouldBeTheExceptionAtUnwrappingDepth(int depth) {
+        assertThat(unwrappedException)
+                .as("unwrapped exception at depth " + depth)
+                .isSameAs(wrapperChain.get(depth));
+    }
+
+    @Then("the exception factory should be cached")
+    public void theExceptionFactoryShouldBeCached() {
+        assertThat(anotherExceptionFactory)
+                .as("exception factory obtained repeatedly")
+                .isSameAs(exceptionFactory);
+    }
+
+    @Then("the business exception factory should be cached")
+    public void theBusinessExceptionFactoryShouldBeCached() {
+        assertThat(anotherBusinessExceptionFactory)
+                .as("business exception factory obtained repeatedly")
+                .isSameAs(businessExceptionFactory);
+    }
+
+    @Then("the factory-created exception should be of type {word}")
+    public void theFactoryCreatedExceptionShouldBeOfType(String exceptionSimpleName) {
+        assertThat(factoryCreatedException)
+                .as("factory-created exception")
+                .isNotNull()
+                .isInstanceOf(resolveFactoryClass(exceptionSimpleName));
+    }
+
+    @Then("the factory-created exception cause should be the original cause")
+    public void theFactoryCreatedExceptionCauseShouldBeTheOriginalCause() {
+        assertThat(factoryCreatedException.getCause())
+                .as("factory-created exception cause")
+                .isSameAs(originalCause);
+    }
+
+    @Then("the exception message should name the {word} class")
+    public void theExceptionMessageShouldNameTheClass(String exceptionSimpleName) {
+        assertThat(textWorld.getLastException())
+                .as("lastException")
+                .isNotNull();
+
+        assertThat(textWorld.getLastException().getMessage())
+                .as("lastException message")
+                .contains(resolveFactoryClass(exceptionSimpleName).getName());
+    }
+
+    /**
+     * Resolves an exception factory class by its simple name, failing early on an unknown fixture name.
+     *
+     * @param exceptionSimpleName exception class simple name
+     * @return resolved exception class
+     */
+    private Class<? extends Exception> resolveExceptionFactoryClass(String exceptionSimpleName) {
+        Class<? extends Exception> exceptionClass = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
+
+        assertThat(exceptionClass)
+                .as("exception class fixture '" + exceptionSimpleName + "'")
+                .isNotNull();
+
+        return exceptionClass;
+    }
+
+    /**
+     * Resolves a business exception factory class by its simple name, failing early on an unknown fixture name.
+     *
+     * @param exceptionSimpleName business exception class simple name
+     * @return resolved business exception class
+     */
+    private Class<? extends BusinessException> resolveBusinessExceptionFactoryClass(String exceptionSimpleName) {
+        Class<? extends BusinessException> exceptionClass = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(
+                exceptionSimpleName);
+
+        assertThat(exceptionClass)
+                .as("business exception class fixture '" + exceptionSimpleName + "'")
+                .isNotNull();
+
+        return exceptionClass;
+    }
+
+    /**
+     * Resolves any factory fixture class (plain or business) by its simple name.
+     *
+     * @param exceptionSimpleName exception class simple name
+     * @return resolved exception class
+     */
+    private Class<? extends Throwable> resolveFactoryClass(String exceptionSimpleName) {
+        Class<? extends Throwable> exceptionClass = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
+
+        if (exceptionClass == null) {
+            exceptionClass = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(exceptionSimpleName);
+        }
+
+        assertThat(exceptionClass)
+                .as("exception class fixture '" + exceptionSimpleName + "'")
+                .isNotNull();
+
+        return exceptionClass;
     }
 
 }

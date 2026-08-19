@@ -1,5 +1,7 @@
 package guru.nicks.commons.utils;
 
+import guru.nicks.commons.exception.BusinessException;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Nullable;
@@ -53,8 +55,12 @@ public class ExceptionUtils {
             "org.apache.tomcat.");
 
     private static final Cache<
-            Class<? extends Throwable>,
+            Class<? extends Exception>,
             Function<Throwable, Exception>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
+
+    private static final Cache<
+            Class<? extends BusinessException>,
+            Function<Throwable, BusinessException>> BUSINESS_EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
 
     /**
      * Formats exception message, adding its stack trace with trivial frames (such as servlets) omitted.
@@ -138,31 +144,65 @@ public class ExceptionUtils {
      * @return factory that accepts a cause ({@link Throwable}) and creates instances of the exception class
      */
     public static Function<Throwable, Exception> getExceptionFactory(Class<? extends Exception> exceptionClass) {
-        return EXCEPTION_FACTORY_CACHE.get(exceptionClass, key -> {
-            // faster than reflection - see e.g. https://dev.java/learn/introduction_to_method_handles/
-            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-            MethodType constructorType = MethodType.methodType(void.class, Throwable.class);
-            MethodHandle constructorHandle;
+        return EXCEPTION_FACTORY_CACHE.get(exceptionClass, ExceptionUtils::getExceptionFactoryWithoutCache);
+    }
 
+    /**
+     * Does the same as {@link #getExceptionFactory(Class)}, but for {@link BusinessException}'s.
+     *
+     * @param businessExceptionClass business exception class
+     * @return factory that accepts a cause ({@link Throwable}) and creates instances of the business exception class
+     */
+    public static Function<Throwable, BusinessException> getBusinessExceptionFactory(
+            Class<? extends BusinessException> businessExceptionClass) {
+        return BUSINESS_EXCEPTION_FACTORY_CACHE.get(businessExceptionClass,
+                ExceptionUtils::getBusinessExceptionFactoryWithoutCache);
+    }
+
+    private static Function<Throwable, Exception> getExceptionFactoryWithoutCache(
+            Class<? extends Exception> exceptionClass) {
+        MethodHandle constructorHandle = getConstructorHandle(exceptionClass);
+
+        return cause -> {
             try {
-                constructorHandle = lookup.findConstructor(exceptionClass, constructorType);
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                throw new IllegalStateException("Exception class [" + exceptionClass.getName()
-                        + "] must have a public constructor accepting a (nullable) Throwable, but: " + e.getMessage(),
-                        e);
+                return (Exception) constructorHandle.invoke(cause);
             }
+            // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
+            catch (Throwable e) {
+                throw new IllegalStateException("Error instantiating exception ["
+                        + exceptionClass.getName() + "]: " + e.getMessage(), e);
+            }
+        };
+    }
 
-            return cause -> {
-                try {
-                    return (Exception) constructorHandle.invoke(cause);
-                }
-                // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
-                catch (Throwable e) {
-                    throw new IllegalStateException("Error instantiating exception ["
-                            + exceptionClass.getName() + "]: " + e.getMessage(), e);
-                }
-            };
-        });
+    private static Function<Throwable, BusinessException> getBusinessExceptionFactoryWithoutCache(
+            Class<? extends BusinessException> exceptionClass) {
+        MethodHandle constructorHandle = getConstructorHandle(exceptionClass);
+
+        return cause -> {
+            try {
+                return (BusinessException) constructorHandle.invoke(cause);
+            }
+            // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
+            catch (Throwable e) {
+                throw new IllegalStateException("Error instantiating exception ["
+                        + exceptionClass.getName() + "]: " + e.getMessage(), e);
+            }
+        };
+    }
+
+    private static MethodHandle getConstructorHandle(Class<? extends Exception> exceptionClass) {
+        // faster than reflection - see e.g. https://dev.java/learn/introduction_to_method_handles/
+        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+        MethodType constructorType = MethodType.methodType(void.class, Throwable.class);
+
+        try {
+            return lookup.findConstructor(exceptionClass, constructorType);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new IllegalStateException("Exception class [" + exceptionClass.getName()
+                    + "] must have a public constructor accepting a (nullable) Throwable, but: " + e.getMessage(),
+                    e);
+        }
     }
 
 }

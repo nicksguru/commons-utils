@@ -8,6 +8,7 @@ import lombok.experimental.StandardException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -34,26 +35,27 @@ public abstract class BusinessException extends RuntimeException {
     @Getter
     private final Map<String, Object> additionalResponseHeaders;
 
-    public BusinessException() {
+    protected BusinessException() {
         additionalResponseHeaders = null;
     }
 
-    public BusinessException(Throwable cause) {
+    protected BusinessException(Throwable cause) {
         super(cause);
         additionalResponseHeaders = null;
     }
 
-    public BusinessException(String message) {
+    protected BusinessException(String message) {
         super(message);
         additionalResponseHeaders = null;
     }
 
-    public BusinessException(String message, Throwable cause) {
+    protected BusinessException(String message, Throwable cause) {
         super(message, cause);
         additionalResponseHeaders = null;
     }
 
-    public BusinessException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    protected BusinessException(String message, Throwable cause, boolean enableSuppression,
+            boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
         additionalResponseHeaders = null;
     }
@@ -69,7 +71,8 @@ public abstract class BusinessException extends RuntimeException {
                         .filter(entry -> StringUtils.isNotBlank(entry.getKey()))
                         .filter(entry -> StringUtils.isNotBlank(Objects.toString(entry.getValue(), null)))
                         .collect(Collectors.toUnmodifiableMap(
-                                entry -> entry.getKey().toLowerCase(),
+                                // fix tor possible Turkish app locale which converts 'I' not to 'i'
+                                entry -> entry.getKey().toLowerCase(Locale.ROOT),
                                 entry -> entry.getValue().toString()));
     }
 

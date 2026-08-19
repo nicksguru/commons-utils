@@ -36,6 +36,16 @@ public interface AsyncCacheRefresher<T> extends AutoCloseable {
     int DEFAULT_ASYNC_REFRESH_TTL_PERCENT = 80;
 
     /**
+     * @see #getFailureCacheTtl()
+     */
+    Duration DEFAULT_FAILURE_CACHE_TTL = Duration.ofSeconds(10);
+
+    /**
+     * @see #getStaleWindow()
+     */
+    Duration DEFAULT_STALE_WINDOW = Duration.ofSeconds(60);
+
+    /**
      * Called by {@link #refresh()} to create and run a future that refreshes the cache.
      *
      * @return future
@@ -56,6 +66,32 @@ public interface AsyncCacheRefresher<T> extends AutoCloseable {
      */
     default Duration getRefreshTimeout() {
         return DEFAULT_REFRESH_TIMEOUT;
+    }
+
+    /**
+     * Configures 'negative caching' of failed refresh attempts.
+     *
+     * @return default implementation returns {@link #DEFAULT_FAILURE_CACHE_TTL}
+     */
+    default Duration getFailureCacheTtl() {
+        return DEFAULT_FAILURE_CACHE_TTL;
+    }
+
+    /**
+     * Zero duration disables serving stale headers: without it, failures surface immediately (see
+     * {@link #getFailurePolicy()}).
+     *
+     * @return default implementation returns {@link #DEFAULT_STALE_WINDOW}
+     */
+    default Duration getStaleWindow() {
+        return DEFAULT_STALE_WINDOW;
+    }
+
+    /**
+     * @return default implementation returns {@link FailurePolicy#FAIL_FAST}
+     */
+    default FailurePolicy getFailurePolicy() {
+        return FailurePolicy.FAIL_FAST;
     }
 
     /**
@@ -151,5 +187,23 @@ public interface AsyncCacheRefresher<T> extends AutoCloseable {
      * @param expirationDate nullable expiration date of the cached object
      */
     void possiblyScheduleAsyncRefresh(@Nullable Instant expirationDate);
+
+    /**
+     * Behavior applied when the cached header has expired, all refresh attempts have failed, and no usable stale value
+     * remains.
+     */
+    enum FailurePolicy {
+
+        /**
+         * Throws exception.
+         */
+        FAIL_FAST,
+
+        /**
+         * Returns empty header value.
+         */
+        SEND_EMPTY
+
+    }
 
 }

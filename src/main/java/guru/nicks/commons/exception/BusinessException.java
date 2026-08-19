@@ -32,21 +32,45 @@ public abstract class BusinessException extends RuntimeException {
      * {@link HttpHeaders}, prefixing non-standard ones with {@code X-}.
      */
     @Getter
-    private Map<String, Object> additionalResponseHeaders;
+    private final Map<String, Object> additionalResponseHeaders;
+
+    public BusinessException() {
+        additionalResponseHeaders = null;
+    }
+
+    public BusinessException(Throwable cause) {
+        super(cause);
+        additionalResponseHeaders = null;
+    }
+
+    public BusinessException(String message) {
+        super(message);
+        additionalResponseHeaders = null;
+    }
+
+    public BusinessException(String message, Throwable cause) {
+        super(message, cause);
+        additionalResponseHeaders = null;
+    }
+
+    public BusinessException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+        additionalResponseHeaders = null;
+    }
 
     protected BusinessException(Map<String, Object> additionalResponseHeaders) {
         super();
 
         // convert header names to lowercase for consistency, for example in case caller reads them by known names
-        if (additionalResponseHeaders != null) {
-            this.additionalResponseHeaders = additionalResponseHeaders.entrySet()
-                    .stream()
-                    .filter(entry -> StringUtils.isNotBlank(entry.getKey()))
-                    .filter(entry -> StringUtils.isNotBlank(Objects.toString(entry.getValue(), null)))
-                    .collect(Collectors.toMap(
-                            entry -> entry.getKey().toLowerCase(),
-                            entry -> entry.getValue().toString()));
-        }
+        this.additionalResponseHeaders = (additionalResponseHeaders == null)
+                ? null
+                : additionalResponseHeaders.entrySet()
+                        .stream()
+                        .filter(entry -> StringUtils.isNotBlank(entry.getKey()))
+                        .filter(entry -> StringUtils.isNotBlank(Objects.toString(entry.getValue(), null)))
+                        .collect(Collectors.toUnmodifiableMap(
+                                entry -> entry.getKey().toLowerCase(),
+                                entry -> entry.getValue().toString()));
     }
 
 }

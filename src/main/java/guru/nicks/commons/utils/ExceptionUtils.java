@@ -1,11 +1,19 @@
 package guru.nicks.commons.utils;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +51,10 @@ public class ExceptionUtils {
             "org.apache.catalina.",
             "org.apache.coyote.",
             "org.apache.tomcat.");
+
+    private static final Cache<
+            Class<? extends Throwable>,
+            Function<Throwable, Exception>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
 
     /**
      * Formats exception message, adding its stack trace with trivial frames (such as servlets) omitted.
@@ -93,6 +105,64 @@ public class ExceptionUtils {
                 .append(stackTrace);
 
         return messageBuilder.toString();
+    }
+
+    /**
+     * Starting with Spring Boot 3.5.3, controller exceptions are often wrapped in {@link InvocationTargetException}
+     * (more than once!); they bear no business meaning and hide the original exception. Likewise, reflection
+     * ({@link Method#invoke(Object, Object...)}) hides the original exception behind
+     * {@link InvocationTargetException}.
+     *
+     * @param cause original exception
+     * @return unwrapped exception (hidden behind multiple {@link InvocationTargetException}'s, up to 100 of them)
+     */
+    public static Throwable unwrapInvocationTargetException(Throwable cause) {
+        int depth = 0;
+        int maxDepth = 100;
+
+        // limit maximum depth to work around circular references
+        while ((cause instanceof InvocationTargetException ite)
+                && (ite.getTargetException() != null)
+                && (++depth <= maxDepth)) {
+            cause = ite.getTargetException();
+        }
+
+        return cause;
+    }
+
+    /**
+     * Returns a cached exception factory function for the given exception class (or creates it). This is actually the
+     * exception constructor wrapped in a {@link Function}.
+     *
+     * @param exceptionClass exception class
+     * @return factory that accepts a cause ({@link Throwable}) and creates instances of the exception class
+     */
+    public static Function<Throwable, Exception> getExceptionFactory(Class<? extends Exception> exceptionClass) {
+        return EXCEPTION_FACTORY_CACHE.get(exceptionClass, key -> {
+            // faster than reflection - see e.g. https://dev.java/learn/introduction_to_method_handles/
+            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+            MethodType constructorType = MethodType.methodType(void.class, Throwable.class);
+            MethodHandle constructorHandle;
+
+            try {
+                constructorHandle = lookup.findConstructor(exceptionClass, constructorType);
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+                throw new IllegalStateException("Exception class [" + exceptionClass.getName()
+                        + "] must have a public constructor accepting a (nullable) Throwable, but: " + e.getMessage(),
+                        e);
+            }
+
+            return cause -> {
+                try {
+                    return (Exception) constructorHandle.invoke(cause);
+                }
+                // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
+                catch (Throwable e) {
+                    throw new IllegalStateException("Error instantiating exception ["
+                            + exceptionClass.getName() + "]: " + e.getMessage(), e);
+                }
+            };
+        });
     }
 
 }

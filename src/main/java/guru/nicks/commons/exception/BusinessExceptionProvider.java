@@ -1,10 +1,9 @@
 package guru.nicks.commons.exception;
 
+import guru.nicks.commons.utils.ExceptionUtils;
+
 import jakarta.annotation.Nullable;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.function.Function;
 
 /**
@@ -21,9 +20,7 @@ import java.util.function.Function;
  * errors'.
  * <p>
  * <b>Implementation requirements:</b> the mapped exception class must have a public constructor accepting a (nullable)
- * {@link Throwable}. The exception factory should be created once via {@link #createExceptionFactory(Class)} and cached
- * (e.g., stored in a field when the enum constant is constructed) rather than recreated on every
- * {@link #getExceptionFactory()} call.
+ * {@link Throwable}.
  * <p>
  * <b>Typical usage:</b> {@code throw MY_ERROR_CODE.toException()} or {@code throw MY_ERROR_CODE.toException(cause)}
  * when the original cause is available.
@@ -31,12 +28,14 @@ import java.util.function.Function;
 public interface BusinessExceptionProvider {
 
     /**
-     * Returns a function that creates instances of the exception class mapped to this error code. This is supposed to
-     * be the result of {@link #createExceptionFactory(Class)} stored in a variable.
+     * Returns a function that creates instances of the exception class mapped to this error code. Default
+     * implementation calls {@link ExceptionUtils#getExceptionFactory(Class)} for {@link #getExceptionClass()}.
      *
      * @return a function that accepts a cause ({@link Throwable}) and creates instances of the exception class
      */
-    Function<Throwable, BusinessException> getExceptionFactory();
+    default Function<Throwable, Exception> getExceptionFactory() {
+        return ExceptionUtils.getExceptionFactory(getExceptionClass());
+    }
 
     /**
      * Returns the exception class mapped to this error code. The reverse mapping is unique too: one exception class
@@ -57,47 +56,14 @@ public interface BusinessExceptionProvider {
     }
 
     /**
-     * Creates a new instance of {@link #getExceptionClass()} with the given cause by calling
-     * {@link #getExceptionFactory()}.
+     * Creates a new instance of {@link #getExceptionClass()} with the given cause.
      *
      * @param cause exception cause, can be {@code null}
-     * @return a new instance of the exception class mapped to this error code
+     * @return a new instance of the exception class
      * @throws IllegalStateException error invoking a constructor accepting a {@link Throwable}
      */
     default BusinessException toException(@Nullable Throwable cause) {
-        return getExceptionFactory().apply(cause);
-    }
-
-    /**
-     * Creates an exception factory function for the given exception class. This is actually the exception constructor
-     * wrapped in a {@link Function}.
-     *
-     * @param exceptionClass exception class
-     * @return factory that accepts a cause ({@link Throwable}) and creates instances of the exception class
-     */
-    default Function<Throwable, BusinessException> createExceptionFactory(Class<? extends Throwable> exceptionClass) {
-        // faster than reflection - see e.g. https://dev.java/learn/introduction_to_method_handles/
-        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-        MethodType constructorType = MethodType.methodType(void.class, Throwable.class);
-        MethodHandle constructorHandle;
-
-        try {
-            constructorHandle = lookup.findConstructor(exceptionClass, constructorType);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new IllegalStateException("Exception class [" + exceptionClass.getName()
-                    + "] must have a public constructor accepting a (nullable) Throwable, but: " + e.getMessage(), e);
-        }
-
-        return cause -> {
-            try {
-                return (BusinessException) constructorHandle.invoke(cause);
-            }
-            // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
-            catch (Throwable e) {
-                throw new IllegalStateException("Error instantiating exception ["
-                        + exceptionClass.getName() + "]: " + e.getMessage(), e);
-            }
-        };
+        return (BusinessException) getExceptionFactory().apply(cause);
     }
 
 }

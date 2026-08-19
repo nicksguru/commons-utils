@@ -17,7 +17,6 @@ import io.cucumber.java.en.When;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
-import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -47,9 +46,8 @@ public class BusinessExceptionProviderSteps {
     private TestErrorCode errorCode;
     private Throwable originalCause;
 
-    private BusinessException createdException;
+    private Throwable createdException;
     private BusinessException anotherCreatedException;
-    private Function<Throwable, BusinessException> createdFactory;
 
     @Given("error code {word} is used")
     public void errorCodeIsUsed(String errorCodeName) {
@@ -80,20 +78,6 @@ public class BusinessExceptionProviderSteps {
                 }
             }
         }));
-    }
-
-    @When("an exception factory is created for {word}")
-    public void anExceptionFactoryIsCreatedFor(String exceptionSimpleName) {
-        Class<? extends Throwable> exceptionClass = resolveExceptionClass(exceptionSimpleName);
-
-        textWorld.setLastException(catchThrowable(() ->
-                createdFactory = errorCode.createExceptionFactory(exceptionClass)));
-    }
-
-    @When("the created exception factory is invoked")
-    public void theCreatedExceptionFactoryIsInvoked() {
-        textWorld.setLastException(catchThrowable(() ->
-                createdException = createdFactory.apply(null)));
     }
 
     @Then("a new exception of type {word} should be created")
@@ -133,13 +117,6 @@ public class BusinessExceptionProviderSteps {
         assertThat(errorCode.getExceptionClass())
                 .as("mapped exception class")
                 .isEqualTo(resolveExceptionClass(exceptionSimpleName));
-    }
-
-    @Then("the exception factory should be reused")
-    public void theExceptionFactoryShouldBeReused() {
-        assertThat(errorCode.getExceptionFactory())
-                .as("exception factory")
-                .isSameAs(errorCode.getExceptionFactory());
     }
 
     /**

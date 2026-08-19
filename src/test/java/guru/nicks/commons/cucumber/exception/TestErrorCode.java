@@ -7,8 +7,7 @@ import guru.nicks.commons.exception.http.ConflictException;
 import guru.nicks.commons.exception.http.NotFoundException;
 
 import lombok.Getter;
-
-import java.util.function.Function;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Error code enum simulating a typical error code enum of a remote service. Each constant is mapped to a specific
@@ -17,6 +16,7 @@ import java.util.function.Function;
  * <p>
  * The nested exception classes violate the implementation requirements on purpose - to test factory creation failures.
  */
+@RequiredArgsConstructor
 public enum TestErrorCode implements BusinessExceptionProvider {
 
     /**
@@ -36,14 +36,6 @@ public enum TestErrorCode implements BusinessExceptionProvider {
 
     @Getter(onMethod_ = @Override)
     private final Class<? extends BusinessException> exceptionClass;
-    @Getter(onMethod_ = @Override)
-    private final Function<Throwable, BusinessException> exceptionFactory;
-
-    TestErrorCode(Class<? extends BusinessException> exceptionClass) {
-        this.exceptionClass = exceptionClass;
-        // created once and cached, as the interface Javadoc requires
-        this.exceptionFactory = createExceptionFactory(exceptionClass);
-    }
 
     /**
      * Has no constructor accepting a {@link Throwable} at all - to test the 'no such constructor' failure.

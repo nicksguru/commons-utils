@@ -55,8 +55,8 @@ public class ExceptionUtils {
             "org.apache.tomcat.");
 
     private static final Cache<
-            Class<? extends Exception>,
-            Function<Throwable, Exception>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
+            Class<? extends RuntimeException>,
+            Function<Throwable, RuntimeException>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
 
     private static final Cache<
             Class<? extends BusinessException>,
@@ -137,35 +137,39 @@ public class ExceptionUtils {
     }
 
     /**
-     * Returns a cached exception factory function for the given exception class (or creates it). This is actually the
-     * exception constructor wrapped in a {@link Function}.
+     * Returns a cached exception factory function (or creates it) for the given exception class.
      *
      * @param exceptionClass exception class
      * @return factory that accepts a cause ({@link Throwable}) and creates instances of the exception class
+     * @throws IllegalStateException if the exception class does not have a public constructor with a cause parameter
+     *                               (so the class itself must be public too)
      */
-    public static Function<Throwable, Exception> getExceptionFactory(Class<? extends Exception> exceptionClass) {
+    public static Function<Throwable, RuntimeException> getExceptionFactory(
+            Class<? extends RuntimeException> exceptionClass) {
         return EXCEPTION_FACTORY_CACHE.get(exceptionClass, ExceptionUtils::getExceptionFactoryWithoutCache);
     }
 
     /**
-     * Does the same as {@link #getExceptionFactory(Class)}, but for {@link BusinessException}'s.
+     * Returns a cached exception factory function (or creates it) for the given business exception class.
      *
-     * @param businessExceptionClass business exception class
-     * @return factory that accepts a cause ({@link Throwable}) and creates instances of the business exception class
+     * @param exceptionClass business exception class
+     * @return factory that accepts a cause ({@link Throwable}) and creates instances of the exception class
+     * @throws IllegalStateException if the exception class does not have a public constructor with a cause parameter
+     *                               (so the class itself must be public too)
      */
     public static Function<Throwable, BusinessException> getBusinessExceptionFactory(
-            Class<? extends BusinessException> businessExceptionClass) {
-        return BUSINESS_EXCEPTION_FACTORY_CACHE.get(businessExceptionClass,
+            Class<? extends BusinessException> exceptionClass) {
+        return BUSINESS_EXCEPTION_FACTORY_CACHE.get(exceptionClass,
                 ExceptionUtils::getBusinessExceptionFactoryWithoutCache);
     }
 
-    private static Function<Throwable, Exception> getExceptionFactoryWithoutCache(
-            Class<? extends Exception> exceptionClass) {
-        MethodHandle constructorHandle = getConstructorHandle(exceptionClass);
+    private static Function<Throwable, RuntimeException> getExceptionFactoryWithoutCache(
+            Class<? extends RuntimeException> exceptionClass) {
+        MethodHandle constructorHandle = getConstructorHandleWithCause(exceptionClass);
 
         return cause -> {
             try {
-                return (Exception) constructorHandle.invoke(cause);
+                return (RuntimeException) constructorHandle.invoke(cause);
             }
             // from Javadoc: 'anything thrown by the underlying method propagates unchanged'
             catch (Throwable e) {
@@ -177,7 +181,7 @@ public class ExceptionUtils {
 
     private static Function<Throwable, BusinessException> getBusinessExceptionFactoryWithoutCache(
             Class<? extends BusinessException> exceptionClass) {
-        MethodHandle constructorHandle = getConstructorHandle(exceptionClass);
+        MethodHandle constructorHandle = getConstructorHandleWithCause(exceptionClass);
 
         return cause -> {
             try {
@@ -191,7 +195,7 @@ public class ExceptionUtils {
         };
     }
 
-    private static MethodHandle getConstructorHandle(Class<? extends Exception> exceptionClass) {
+    private static MethodHandle getConstructorHandleWithCause(Class<? extends RuntimeException> exceptionClass) {
         // faster than reflection - see e.g. https://dev.java/learn/introduction_to_method_handles/
         MethodHandles.Lookup lookup = MethodHandles.publicLookup();
         MethodType constructorType = MethodType.methodType(void.class, Throwable.class);

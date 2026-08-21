@@ -33,7 +33,7 @@ public class ExceptionUtilsSteps {
     /**
      * Exception classes resolvable by their simple names in feature files (for the exception factory).
      */
-    private static final Map<String, Class<? extends Exception>> FACTORY_EXCEPTION_CLASSES = Map.of(
+    private static final Map<String, Class<? extends RuntimeException>> FACTORY_EXCEPTION_CLASSES = Map.of(
             "IllegalStateException", IllegalStateException.class,
             "NoCauseConstructorException", NoCauseConstructorException.class);
 
@@ -54,13 +54,15 @@ public class ExceptionUtilsSteps {
     private Throwable unwrappedException;
     private List<Throwable> wrapperChain;
 
-    private Class<? extends Exception> exceptionFactoryClass;
-    private Class<? extends BusinessException> businessExceptionFactoryClass;
+    private Class<? extends RuntimeException> exceptionClass;
+    private Class<? extends BusinessException> businessExceptionClass;
 
-    private Function<Throwable, Exception> exceptionFactory;
-    private Function<Throwable, Exception> anotherExceptionFactory;
+    private Function<Throwable, RuntimeException> exceptionFactory;
+    private Function<Throwable, RuntimeException> anotherExceptionFactory;
+
     private Function<Throwable, BusinessException> businessExceptionFactory;
     private Function<Throwable, BusinessException> anotherBusinessExceptionFactory;
+
     private Throwable factoryCreatedException;
 
     @Given("an exception of type {string} with message {string} is created")
@@ -266,16 +268,16 @@ public class ExceptionUtilsSteps {
 
     @When("an exception factory is obtained for the {word} class")
     public void anExceptionFactoryIsObtainedForTheClass(String exceptionSimpleName) {
-        exceptionFactoryClass = resolveExceptionFactoryClass(exceptionSimpleName);
+        exceptionClass = resolveExceptionClass(exceptionSimpleName);
 
         textWorld.setLastException(catchThrowable(() ->
-                exceptionFactory = ExceptionUtils.getExceptionFactory(exceptionFactoryClass)));
+                exceptionFactory = ExceptionUtils.getExceptionFactory(exceptionClass)));
     }
 
     @When("the exception factory is obtained again")
     public void theExceptionFactoryIsObtainedAgain() {
         textWorld.setLastException(catchThrowable(() ->
-                anotherExceptionFactory = ExceptionUtils.getExceptionFactory(exceptionFactoryClass)));
+                anotherExceptionFactory = ExceptionUtils.getExceptionFactory(exceptionClass)));
     }
 
     @When("the exception factory is applied to the original cause")
@@ -286,17 +288,17 @@ public class ExceptionUtilsSteps {
 
     @When("a business exception factory is obtained for the {word} class")
     public void aBusinessExceptionFactoryIsObtainedForTheClass(String exceptionSimpleName) {
-        businessExceptionFactoryClass = resolveBusinessExceptionFactoryClass(exceptionSimpleName);
+        businessExceptionClass = resolveBusinessExceptionFactoryClass(exceptionSimpleName);
 
         textWorld.setLastException(catchThrowable(() ->
-                businessExceptionFactory = ExceptionUtils.getBusinessExceptionFactory(businessExceptionFactoryClass)));
+                businessExceptionFactory = ExceptionUtils.getBusinessExceptionFactory(businessExceptionClass)));
     }
 
     @When("the business exception factory is obtained again")
     public void theBusinessExceptionFactoryIsObtainedAgain() {
         textWorld.setLastException(catchThrowable(() ->
                 anotherBusinessExceptionFactory = ExceptionUtils.getBusinessExceptionFactory(
-                        businessExceptionFactoryClass)));
+                        businessExceptionClass)));
     }
 
     @When("the business exception factory is applied to the original cause")
@@ -391,14 +393,14 @@ public class ExceptionUtilsSteps {
      * @param exceptionSimpleName exception class simple name
      * @return resolved exception class
      */
-    private Class<? extends Exception> resolveExceptionFactoryClass(String exceptionSimpleName) {
-        Class<? extends Exception> exceptionClass = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
+    private Class<? extends RuntimeException> resolveExceptionClass(String exceptionSimpleName) {
+        Class<? extends RuntimeException> clazz = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
 
-        assertThat(exceptionClass)
+        assertThat(clazz)
                 .as("exception class fixture '" + exceptionSimpleName + "'")
                 .isNotNull();
 
-        return exceptionClass;
+        return clazz;
     }
 
     /**
@@ -408,14 +410,14 @@ public class ExceptionUtilsSteps {
      * @return resolved business exception class
      */
     private Class<? extends BusinessException> resolveBusinessExceptionFactoryClass(String exceptionSimpleName) {
-        Class<? extends BusinessException> exceptionClass = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(
+        Class<? extends BusinessException> clazz = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(
                 exceptionSimpleName);
 
-        assertThat(exceptionClass)
+        assertThat(clazz)
                 .as("business exception class fixture '" + exceptionSimpleName + "'")
                 .isNotNull();
 
-        return exceptionClass;
+        return clazz;
     }
 
     /**
@@ -425,17 +427,17 @@ public class ExceptionUtilsSteps {
      * @return resolved exception class
      */
     private Class<? extends Throwable> resolveFactoryClass(String exceptionSimpleName) {
-        Class<? extends Throwable> exceptionClass = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
+        Class<? extends Throwable> clazz = FACTORY_EXCEPTION_CLASSES.get(exceptionSimpleName);
 
-        if (exceptionClass == null) {
-            exceptionClass = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(exceptionSimpleName);
+        if (clazz == null) {
+            clazz = FACTORY_BUSINESS_EXCEPTION_CLASSES.get(exceptionSimpleName);
         }
 
-        assertThat(exceptionClass)
+        assertThat(clazz)
                 .as("exception class fixture '" + exceptionSimpleName + "'")
                 .isNotNull();
 
-        return exceptionClass;
+        return clazz;
     }
 
 }

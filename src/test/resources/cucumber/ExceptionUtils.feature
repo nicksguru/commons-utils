@@ -107,6 +107,20 @@ Feature: Exception formatting utilities
     When the exception is unwrapped from InvocationTargetException
     Then the unwrapped exception should be the exception itself
 
+  Scenario: Sneaky throw rethrows an unchecked exception unchanged
+    Given an exception of type "IllegalStateException" with message "Unchecked failure" is created
+    When the exception is sneaky-thrown
+    Then the exception should be of type "IllegalStateException"
+    And the exception message should contain "Unchecked failure"
+    And the sneaky-thrown exception should be the exception itself
+
+  Scenario: Sneaky throw rethrows a checked exception unchanged and unwrapped
+    Given a checked exception with message "Checked failure" is created
+    When the exception is sneaky-thrown
+    Then the exception should be of type "ReflectiveOperationException"
+    And the exception message should contain "Checked failure"
+    And the sneaky-thrown exception should be the exception itself
+
   Scenario: Chain of exactly 100 nested InvocationTargetExceptions is unwrapped fully
     Given an exception of type "IllegalStateException" with message "Innermost" is created
     And the exception is wrapped in 100 nested InvocationTargetExceptions

@@ -115,7 +115,7 @@ public class ExceptionUtils {
 
     /**
      * Starting with Spring Boot 3.5.3, controller exceptions are often wrapped in {@link InvocationTargetException}
-     * (more than once!); they bear no business meaning and hide the original exception. Likewise, reflection
+     * (more than once!); it bears no business meaning and hides the original exception. Likewise, reflection
      * ({@link Method#invoke(Object, Object...)}) hides the original exception behind
      * {@link InvocationTargetException}.
      *
@@ -134,6 +134,21 @@ public class ExceptionUtils {
         }
 
         return cause;
+    }
+
+    /**
+     * Rethrows the given exception as-is, bypassing the compiler's checked-exception checking (the 'sneaky throw'
+     * idiom). Provides exception transparency: an exception caught in a generic context (such as reflection) reaches
+     * the caller unchanged, without wrapping. If the argument is {@code null}, the resulting {@code throw null}
+     * yields {@link NullPointerException}, mirroring plain Java semantics.
+     *
+     * @param t exception to rethrow
+     * @param <T> exception type inferred at the call site, enabling the {@code throw sneakyThrow(t)} idiom
+     * @return never returns normally
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends Throwable> T sneakyThrow(Throwable t) throws T {
+        throw (T) t;
     }
 
     /**

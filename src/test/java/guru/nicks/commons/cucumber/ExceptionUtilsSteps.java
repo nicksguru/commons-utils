@@ -49,7 +49,6 @@ public class ExceptionUtilsSteps {
     private final TextWorld textWorld;
 
     private Throwable testException;
-
     private Throwable originalCause;
     private Throwable unwrappedException;
     private List<Throwable> wrapperChain;
@@ -256,6 +255,11 @@ public class ExceptionUtilsSteps {
         testException = new InvocationTargetException(null, "without a target");
     }
 
+    @Given("a checked exception with message {string} is created")
+    public void aCheckedExceptionWithMessageIsCreated(String message) {
+        testException = new ReflectiveOperationException(message);
+    }
+
     @Given("an original cause exception is created")
     public void anOriginalCauseExceptionIsCreated() {
         originalCause = new IllegalStateException("Original cause");
@@ -264,6 +268,13 @@ public class ExceptionUtilsSteps {
     @When("the exception is unwrapped from InvocationTargetException")
     public void theExceptionIsUnwrappedFromInvocationTargetException() {
         unwrappedException = ExceptionUtils.unwrapInvocationTargetException(testException);
+    }
+
+    @When("the exception is sneaky-thrown")
+    public void theExceptionIsSneakyThrown() {
+        textWorld.setLastException(catchThrowable(() -> {
+            throw ExceptionUtils.sneakyThrow(testException);
+        }));
     }
 
     @When("an exception factory is obtained for the {word} class")
@@ -333,6 +344,13 @@ public class ExceptionUtilsSteps {
         assertThat(unwrappedException)
                 .as("unwrapped exception")
                 .isInstanceOf(InvocationTargetException.class);
+    }
+
+    @Then("the sneaky-thrown exception should be the exception itself")
+    public void theSneakyThrownExceptionShouldBeTheExceptionItself() {
+        assertThat(textWorld.getLastException())
+                .as("sneaky-thrown exception")
+                .isSameAs(testException);
     }
 
     /**

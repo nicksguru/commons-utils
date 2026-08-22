@@ -74,7 +74,6 @@ public class ReflectionUtils {
      */
     public static Set<Class<?>> getClassHierarchy(Class<?> clazz) {
         // 'get' method may return null as per Caffeine specs, but never does in this particular case
-        //noinspection DataFlowIssue
         return CLASS_HIERARCHY_CACHE.get(clazz, WithoutCache::getClassHierarchyWithoutCache);
     }
 
@@ -92,7 +91,6 @@ public class ReflectionUtils {
      */
     public static Set<Method> getClassHierarchyMethods(Class<?> clazz) {
         // 'get' method may return null as per Caffeine specs, but never does in this particular case
-        //noinspection DataFlowIssue
         return CLASS_HIERARCHY_METHODS_CACHE.get(clazz, WithoutCache::getClassHierarchyMethodsWithoutCache);
     }
 
@@ -191,8 +189,11 @@ public class ReflectionUtils {
     }
 
     /**
-     * Creates an object of the given class even if it has no default constructor (which should be used with caution).
-     * Indispensable for Spring bean proxy creation.
+     * Creates an object of the given class even if it has no default constructor. First, the default constructor is
+     * tried. If it fails, {@link ObjenesisStd} is used (WARNING: it <b>bypasses field initializers</b>!).
+     * <p>
+     * Normally, this method should not be used because there's a risk of creating objects with uninitialized fields
+     * (see warning above) - {@link BeanUtils#instantiateClass(Class)} suffices in most cases.
      *
      * @param clazz object class
      * @param <T>   object class type
@@ -208,11 +209,10 @@ public class ReflectionUtils {
             return BeanUtils.instantiateClass(clazz);
         }
         // Instantiate class having no default constructor. Supposing it's a rare case.
-        // TODO: if many objects of the same class are to be instantiated, pass useCache=true to constructor and use the
-        // same object for all operations.
+        // WARNING: this approach bypasses field initializers!
         catch (BeanInstantiationException e1) {
             try {
-                return new ObjenesisStd()
+                return new ObjenesisStd(true)
                         .getInstantiatorOf(clazz)
                         .newInstance();
             } catch (Exception e2) {

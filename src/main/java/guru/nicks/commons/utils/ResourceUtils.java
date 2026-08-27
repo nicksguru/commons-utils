@@ -10,7 +10,6 @@ import com.github.benmanes.caffeine.cache.Scheduler;
 import jakarta.annotation.Nullable;
 import lombok.Builder;
 import lombok.SneakyThrows;
-import lombok.Synchronized;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
@@ -174,19 +173,22 @@ public class ResourceUtils {
      * @return existing resource
      * @throws NoSuchElementException resource not found
      */
-    @Synchronized
     public static Optional<CacheEntry> findAndCacheResource(String path, String filename) {
         String key = normalizePathPrefix(path) + FilenameUtils.normalize(filename);
+
+        // lock-free hit path - Caffeine is thread-safe, no reason to serialize cache hits behind a global monitor
         CacheEntry cacheEntry = RESOURCE_CACHE.getIfPresent(key);
 
         if (cacheEntry == null) {
+            // concurrent duplicate loads of the same key are benign: idempotent read of the same resource,
+            // last write wins with identical content
             cacheEntry = findWithoutCache(key);
 
-            // store in cache only if content size doesn't exceed the maximum (Caffeine doesn't have this feature,
-            // therefore LoadingCache can't be used)
+            // cache only entries within the size limit; oversized entries are re-read per call by design
+            // (Cache.get(key, loader) can't express this, hence getIfPresent + conditional put)
             if ((cacheEntry != null)
                     && (cacheEntry.content() != null)
-                    && (cacheEntry.content().length <= MAX_ENTRY_SIZE.toBytes())) {
+                    && (MAX_ENTRY_SIZE.toBytes() >= cacheEntry.content().length)) {
                 RESOURCE_CACHE.put(key, cacheEntry);
             }
         }

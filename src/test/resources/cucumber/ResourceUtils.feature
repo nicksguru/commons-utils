@@ -40,3 +40,7 @@ Feature: ResourceUtils
     When app build tag is retrieved first time
     And app build tag is retrieved second time
     Then both build tags should be identical
+
+  Scenario: Concurrent cache misses don't serialize behind a global monitor
+    When 8 threads concurrently retrieve and cache resource "/cucumber" and "ResourceUtils.feature"
+    Then all concurrent retrievals should return the same cached entry

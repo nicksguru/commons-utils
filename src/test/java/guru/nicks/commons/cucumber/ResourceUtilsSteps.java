@@ -11,6 +11,7 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import lombok.SneakyThrows;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -20,6 +21,10 @@ import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -40,6 +45,9 @@ public class ResourceUtilsSteps {
     private String firstBuildTag;
     private String secondBuildTag;
     private String actualBuildTag;
+    private int concurrentThreadCount;
+    private Queue<ResourceUtils.CacheEntry> concurrentEntries;
+    private Queue<Throwable> concurrentFailures;
 
     @Before
     public void beforeEachScenario() {
@@ -161,6 +169,63 @@ public class ResourceUtilsSteps {
         assertThat(secondBuildTag)
                 .as("Second build tag")
                 .isEqualTo(firstBuildTag);
+    }
+
+    /**
+     * Retrieves the same classpath resource from the given number of virtual threads, all released simultaneously by a
+     * barrier, so cache misses overlap and the lock-free loading path is exercised.
+     *
+     * @param threadCount number of threads to run
+     * @param path        resource path - passed from app config and is trusted
+     * @param filename    - passed from web requests and is therefore NOT trusted
+     */
+    @SneakyThrows
+    @When("{int} threads concurrently retrieve and cache resource {string} and {string}")
+    public void threadsConcurrentlyRetrieveAndCacheResource(int threadCount, String path, String filename) {
+        concurrentThreadCount = threadCount;
+        concurrentEntries = new ConcurrentLinkedQueue<>();
+        concurrentFailures = new ConcurrentLinkedQueue<>();
+
+        // cold start: guarantee a cache miss in every thread to exercise concurrent duplicate loading
+        Field cacheField = ResourceUtils.class.getDeclaredField("RESOURCE_CACHE");
+        cacheField.setAccessible(true);
+        ((Cache<?, ?>) cacheField.get(null)).invalidateAll();
+
+        var startBarrier = new CyclicBarrier(threadCount);
+
+        // try-with-resources waits (close()) for all tasks to finish before the Then step runs
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < threadCount; i++) {
+                executor.submit(() -> {
+                    try {
+                        startBarrier.await();
+                        ResourceUtils.findAndCacheResource(path, filename).ifPresent(concurrentEntries::add);
+                    } catch (Throwable t) {
+                        concurrentFailures.add(t);
+                    }
+                    return null;
+                });
+            }
+        }
+    }
+
+    /**
+     * Verifies that all concurrent retrievals succeeded and observed identical resource content, no matter which of the
+     * benign duplicate loads won the race.
+     */
+    @Then("all concurrent retrievals should return the same cached entry")
+    public void allConcurrentRetrievalsShouldReturnTheSameCachedEntry() {
+        assertThat(concurrentFailures)
+                .as("No thread should fail")
+                .isEmpty();
+
+        assertThat(concurrentEntries)
+                .as("Every thread should receive a cache entry")
+                .hasSize(concurrentThreadCount);
+
+        assertThat(concurrentEntries.stream().map(ResourceUtils.CacheEntry::checksum).distinct().count())
+                .as("All threads should see identical content")
+                .isEqualTo(1L);
     }
 
 }

@@ -21,8 +21,8 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 /**
  * Time-related utility methods.
  * <p>
- * NOTE: {@link #setCustomEpoch(Instant)} must be called before {@link #getDurationSinceCustomEpoch(Instant)},
- * otherwise the latter fails with an exception.
+ * NOTE: if {@link #setCustomEpoch(Instant)} is not called, {@link #getDurationSinceCustomEpoch(Instant)} silently
+ * falls back to the Unix epoch.
  */
 @UtilityClass
 @Slf4j
@@ -34,11 +34,12 @@ public class TimeUtils {
     private static final Pattern SPLIT_DURATION_PATTERN = Pattern.compile("\\p{javaSpaceChar}*:\\p{javaSpaceChar}*");
 
     /**
-     * {@code $1} spans fractional digits to retain
+     * Custom Epoch to measure durations from; {@code null} when not set, in which case the Unix epoch is used.
      *
-     * @see #humanFormatDuration(Duration)
+     * @see #setCustomEpoch(Instant)
      */
-    private static Instant customEpoch;
+    // written once at startup, read by request threads - volatile guarantees the write becomes visible to all readers
+    private static volatile Instant customEpoch;
 
     /**
      * Getter for the custom Epoch.
@@ -104,7 +105,7 @@ public class TimeUtils {
      * @return seconds (0 {@code null} if the argument was {@code null} or blank)
      * @throws IllegalArgumentException invalid duration format (must always have all the 3 digits)
      */
-    public static int convertHmsDurationToSeconds(@Nullable String hms) {
+    public static long convertHmsDurationToSeconds(@Nullable String hms) {
         // length unknown
         if (StringUtils.isBlank(hms)) {
             return 0;
@@ -128,7 +129,7 @@ public class TimeUtils {
             throw new IllegalArgumentException("Duration must be H:M:S (even if H=0 or M=0)");
         }
 
-        return hours * 3600 + minutes * 60 + seconds;
+        return hours * 3600L + minutes * 60L + seconds;
     }
 
     /**
@@ -137,7 +138,7 @@ public class TimeUtils {
      *
      * @param timestamp timestamp
      * @return duration
-     * @throws IllegalArgumentException {@code timestamp} is earlier than the custom Epoch or the custom Epoch not set
+     * @throws IllegalArgumentException {@code timestamp} is earlier than the custom Epoch
      */
     @ConstraintArguments
     public Duration getDurationSinceCustomEpoch(Instant timestamp) {

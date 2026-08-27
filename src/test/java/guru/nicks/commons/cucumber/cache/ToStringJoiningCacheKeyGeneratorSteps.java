@@ -32,6 +32,8 @@ public class ToStringJoiningCacheKeyGeneratorSteps {
 
     private ToStringJoiningCacheKeyGenerator keyGenerator;
     private Object generatedKey;
+    private Object firstKey;
+    private Object secondKey;
     private CustomObject customObject;
 
     @Before
@@ -98,6 +100,46 @@ public class ToStringJoiningCacheKeyGeneratorSteps {
         assertThat(generatedKey)
                 .as("generatedKey")
                 .isEqualTo(expectedKey);
+    }
+
+    /**
+     * Generates a key from the first colliding argument tuple.
+     *
+     * @param param1 first argument
+     * @param param2 second argument
+     */
+    @When("a first cache key is generated with string parameters {string} and {string}")
+    public void aFirstCacheKeyIsGeneratedWithStringParameters(String param1, String param2) {
+        firstKey = keyGenerator.generate(targetObject, method, param1, param2);
+    }
+
+    /**
+     * Generates a key from the second colliding argument tuple.
+     *
+     * @param param1 first argument
+     * @param param2 second argument
+     */
+    @When("a second cache key is generated with string parameters {string} and {string}")
+    public void aSecondCacheKeyIsGeneratedWithStringParameters(String param1, String param2) {
+        secondKey = keyGenerator.generate(targetObject, method, param1, param2);
+    }
+
+    /**
+     * Generates a key from two {@code null} arguments - the first half of the null-vs-empty-string collision pair.
+     */
+    @When("a first cache key is generated with parameters null and null")
+    public void aFirstCacheKeyIsGeneratedWithParametersNullAndNull() {
+        firstKey = keyGenerator.generate(targetObject, method, null, null);
+    }
+
+    /**
+     * Verifies the two generated keys don't collide, so different argument tuples never share a cached result.
+     */
+    @Then("the two generated keys should not collide")
+    public void theTwoGeneratedKeysShouldNotCollide() {
+        assertThat(secondKey)
+                .as("Key of the second argument tuple should differ from the first one's key")
+                .isNotEqualTo(firstKey);
     }
 
     /**

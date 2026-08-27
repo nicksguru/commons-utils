@@ -43,6 +43,12 @@ Feature: Auth Utils
     Then the username should be "user@"
     And the password should be "password#$"
 
+  Scenario: Basic auth header with colon in password is parsed
+    Given a basic auth header "Basic dXNlcjpwYTpzczp3b3Jk"
+    When the basic auth header is parsed
+    Then the username should be "user"
+    And the password should be "pa:ss:word"
+
   Scenario: Invalid basic auth header format causes exception
     Given a basic auth header "Basic invalid-base64"
     When the basic auth header is parsed

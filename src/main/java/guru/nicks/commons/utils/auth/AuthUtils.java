@@ -76,7 +76,8 @@ public class AuthUtils {
                 Base64.getDecoder().decode(headerValue),
                 StandardCharsets.UTF_8);
 
-        String[] parts = decoded.split(":");
+        // RFC 7617: password may contain ':' - split into at most 2 parts at the FIRST colon
+        String[] parts = decoded.split(":", 2);
         check(parts.length, "number of Basic Auth header value parts").eq(2);
 
         return BasicAuthCredentials.builder()

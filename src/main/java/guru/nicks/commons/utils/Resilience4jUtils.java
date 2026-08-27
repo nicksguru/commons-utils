@@ -23,40 +23,38 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Resilience4jUtils {
 
+    private static final RetryRegistry RETRY_REGISTRY = RetryRegistry.ofDefaults();
+    private static final CircuitBreakerRegistry CIRCUIT_BREAKER_REGISTRY = CircuitBreakerRegistry.ofDefaults();
+    private static final RateLimiterRegistry RATE_LIMITER_REGISTRY = RateLimiterRegistry.ofDefaults();
+
     /**
-     * Creates a retrier with default settings. By default, the delay between (3) retries is constant and equals 0.5
-     * seconds - see {@link RetryConfig}. If all retries fail, the original exception is re-thrown.
+     * Creates a retrier with default settings. For defaults, see {@link RetryConfig}. If all retries fail, the original
+     * exception is re-thrown.
      *
-     * @param name unique retrier name; if already used, no new retrier is created
+     * @param name unique retrier name; if already used, existing retrier is returned
      */
     public Retry createDefaultRetrier(String name) {
-        return RetryRegistry
-                .ofDefaults()
-                .retry(name);
+        return RETRY_REGISTRY.retry(name);
     }
 
     /**
      * Creates a circuit breaker with default settings. For defaults, see {@link CircuitBreakerConfig}. If the circuit
      * breaker is not open, {@link CallNotPermittedException} is thrown.
      *
-     * @param name unique circuit breaker name; if already used, no new circuit breaker is created
+     * @param name unique circuit breaker name; if already used, existing circuit breaker is returned
      */
     public CircuitBreaker createDefaultCircuitBreaker(String name) {
-        return CircuitBreakerRegistry
-                .ofDefaults()
-                .circuitBreaker(name);
+        return CIRCUIT_BREAKER_REGISTRY.circuitBreaker(name);
     }
 
     /**
      * Creates a rate limiter with default settings. For defaults, see {@link RateLimiterConfig}. If rate limit has been
      * exceeded, {@link RequestNotPermitted} is thrown.
      *
-     * @param name unique rate limiter name; if already used, no new rate limiter is created
+     * @param name unique rate limiter name; if already used, existing rate limiter is returned
      */
     public RateLimiter createDefaultRateLimiter(String name) {
-        return RateLimiterRegistry
-                .ofDefaults()
-                .rateLimiter(name);
+        return RATE_LIMITER_REGISTRY.rateLimiter(name);
     }
 
 }

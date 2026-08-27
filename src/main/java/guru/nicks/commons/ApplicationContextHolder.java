@@ -26,7 +26,11 @@ public class ApplicationContextHolder {
      */
     public static final String SPRING_APPLICATION_NAME_PROPERTY = "spring.application.name";
 
-    private static ApplicationContext applicationContext;
+    /**
+     * Written by the Spring lifecycle thread, read by request threads - volatile bridges the visibility gap.
+     */
+    @Nullable
+    private static volatile ApplicationContext applicationContext;
 
     /**
      * Finds application context.

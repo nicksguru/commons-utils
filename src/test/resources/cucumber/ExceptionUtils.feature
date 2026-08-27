@@ -39,10 +39,9 @@ Feature: Exception formatting utilities
     Then stack trace "<shouldContain>" contain "<className>"
     Examples:
       | className                                                                           | shouldContain |
-      | brave.servlet.TracingFilter                                                         | should not    |
       | java.lang.invoke.MethodHandle                                                       | should not    |
+      | java.lang.reflect.Method                                                            | should not    |
       | jakarta.servlet.FilterChain                                                         | should not    |
-      | javax.servlet.ServletRequest                                                        | should not    |
       | jdk.internal.reflect.NativeMethodAccessorImpl                                       | should not    |
       | org.springframework.cglib.proxy.MethodProxy                                         | should not    |
       | org.springframework.security.web.access.ExceptionTranslationFilter                  | should not    |
@@ -56,9 +55,13 @@ Feature: Exception formatting utilities
       | org.springframework.security.web.session.SessionManagementFilter                    | should not    |
       | org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter | should not    |
       | org.springframework.boot.actuate.metrics.MetricsEndpoint                            | should not    |
+      | org.springframework.web.filter.OncePerRequestFilter                                 | should not    |
+      | org.springframework.web.servlet.DispatcherServlet                                   | should not    |
       | reactor.core.publisher.Mono                                                         | should not    |
       | okhttp3.internal.http.HttpCodec                                                     | should not    |
       | io.undertow.servlet.handlers.ServletHandler                                         | should not    |
+      | feign.SynchronousMethodHandler                                                      | should not    |
+      | io.github.resilience4j.retry.Retry                                                  | should not    |
       | org.jboss.threads.EnhancedQueueExecutor                                             | should not    |
       | org.apache.catalina.core.ApplicationFilterChain                                     | should not    |
       | org.apache.coyote.AbstractProcessor                                                 | should not    |

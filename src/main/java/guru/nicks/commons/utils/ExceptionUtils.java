@@ -1,5 +1,6 @@
 package guru.nicks.commons.utils;
 
+import guru.nicks.commons.cache.domain.CacheConstants;
 import guru.nicks.commons.exception.BusinessException;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -24,12 +25,17 @@ import java.util.stream.Collectors;
 @UtilityClass
 public class ExceptionUtils {
 
+    /**
+     * Class-name prefixes of trivial infrastructure frames (reflection and proxying machinery, servlet API and filter
+     * chains, web and messaging dispatch, HTTP client and resilience decorators, servlet containers) omitted from
+     * stack traces by {@link #formatWithCompactStackTrace(Throwable)}. A frame is omitted when its class name
+     * {@code startsWith} any of these prefixes; package-scoped prefixes end with a dot.
+     */
     public static final Set<String> OMITTED_CLASS_PREFIXES = Set.of(
-            "brave.servlet.",
             "java.lang.invoke.",
+            "java.lang.reflect.",
             "java.net.AbstractPlainSocketImpl",
             "jakarta.servlet.",
-            "javax.servlet.",
             "jdk.internal.",
 
             "org.springframework.cglib.",
@@ -44,23 +50,42 @@ public class ExceptionUtils {
             "org.springframework.security.web.session",
             "org.springframework.security.web.servletapi.",
             "org.springframework.boot.actuate.metrics.",
+            "org.springframework.web.filter.",
+            "org.springframework.web.servlet.DispatcherServlet",
 
             "reactor.core.",
-            "okhttp3.internal",
+            "okhttp3.internal.",
             "io.undertow.",
+
+            "feign.",
+            "io.github.resilience4j.",
 
             "org.jboss.threads.",
             "org.apache.catalina.",
             "org.apache.coyote.",
             "org.apache.tomcat.");
 
+    /**
+     * Unbounded caches keyed by Class with strong references pin classloaders in dynamic environments - metaspace
+     * leaks.
+     */
     private static final Cache<
             Class<? extends RuntimeException>,
-            Function<Throwable, RuntimeException>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
+            Function<Throwable, RuntimeException>> EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder()
+            .weakKeys()
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .build();
 
+    /**
+     * Unbounded caches keyed by Class with strong references pin classloaders in dynamic environments - metaspace
+     * leaks.
+     */
     private static final Cache<
             Class<? extends BusinessException>,
-            Function<Throwable, BusinessException>> BUSINESS_EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder().build();
+            Function<Throwable, BusinessException>> BUSINESS_EXCEPTION_FACTORY_CACHE = Caffeine.newBuilder()
+            .weakKeys()
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .build();
 
     /**
      * Formats exception message, adding its stack trace with trivial frames (such as servlets) omitted.
@@ -139,10 +164,10 @@ public class ExceptionUtils {
     /**
      * Rethrows the given exception as-is, bypassing the compiler's checked-exception checking (the 'sneaky throw'
      * idiom). Provides exception transparency: an exception caught in a generic context (such as reflection) reaches
-     * the caller unchanged, without wrapping. If the argument is {@code null}, the resulting {@code throw null}
-     * yields {@link NullPointerException}, mirroring plain Java semantics.
+     * the caller unchanged, without wrapping. If the argument is {@code null}, the resulting {@code throw null} yields
+     * {@link NullPointerException}, mirroring plain Java semantics.
      *
-     * @param t exception to rethrow
+     * @param t   exception to rethrow
      * @param <T> exception type inferred at the call site, enabling the {@code throw sneakyThrow(t)} idiom
      * @return never returns normally
      */

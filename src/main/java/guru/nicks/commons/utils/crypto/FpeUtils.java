@@ -66,6 +66,10 @@ public class FpeUtils {
                 FPEFF1Engine::new, key, tweak);
     }
 
+    /**
+     * Thread-safety: implementations are safe for concurrent use - internally, access to the stateful (and not
+     * thread-safe) FPE engines is serialized, so concurrent calls never interleave engine state.
+     */
     public interface SequenceEncryptor {
 
         /**
@@ -92,6 +96,10 @@ public class FpeUtils {
 
     }
 
+    /**
+     * Thread-safety: the BouncyCastle FPE engines are stateful and not thread-safe, therefore every engine use is
+     * guarded with {@code synchronized} on the engine itself; single-threaded behavior is unchanged.
+     */
     static class FpeSequenceEncryptor implements SequenceEncryptor {
 
         /**
@@ -164,7 +172,12 @@ public class FpeUtils {
             encryptorFunction = input -> {
                 byte[] plainText = alphabet2decimal(input);
                 byte[] cipherText = new byte[plainText.length];
-                encryptEngine.processBlock(plainText, 0, plainText.length, cipherText, 0);
+
+                // FPEEngine is stateful and not thread-safe - serialize access to the shared engine
+                synchronized (encryptEngine) {
+                    encryptEngine.processBlock(plainText, 0, plainText.length, cipherText, 0);
+                }
+
                 return decimal2alphabet(cipherText);
             };
 
@@ -174,7 +187,12 @@ public class FpeUtils {
             decryptorFunction = input -> {
                 byte[] cipherText = alphabet2decimal(input);
                 byte[] plainText = new byte[cipherText.length];
-                decryptEngine.processBlock(cipherText, 0, cipherText.length, plainText, 0);
+
+                // FPEEngine is stateful and not thread-safe - serialize access to the shared engine
+                synchronized (decryptEngine) {
+                    decryptEngine.processBlock(cipherText, 0, cipherText.length, plainText, 0);
+                }
+
                 return decimal2alphabet(plainText);
             };
         }

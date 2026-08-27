@@ -84,3 +84,11 @@ Feature: FPE Utils
       | a             | 3a1ay4         | 00000a         |
       | ab            | 1ebc03         | 0000ab         |
       | abc           | e420b2         | 000abc         |
+
+  Scenario: Concurrent encryption remains injective
+    Given an FF31 sequence encryptor is created with key "secretkey16bytes", tweak "7bytes!", alphabet "0123456789", and padding to 8 positions
+    And no exception should be thrown
+    And the sequence value supplier will return distinct values from a thread-safe counter
+    When the next encrypted value is requested 1000 times in parallel by 8 threads
+    Then no exception should be thrown
+    And all encrypted values are distinct

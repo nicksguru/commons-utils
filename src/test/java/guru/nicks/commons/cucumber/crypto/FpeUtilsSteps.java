@@ -15,7 +15,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -35,6 +41,7 @@ public class FpeUtilsSteps {
 
     private String encryptedValue;
     private String decryptedValue;
+    private List<String> concurrentEncryptedValues;
 
     @Before
     public void beforeEachScenario() {
@@ -70,6 +77,54 @@ public class FpeUtilsSteps {
         when(nextValueSupplier.get())
                 .thenReturn(value1)
                 .thenReturn(value2);
+    }
+
+    @Given("the sequence value supplier will return distinct values from a thread-safe counter")
+    public void theSequenceValueSupplierWillReturnDistinctValuesFromThreadSafeCounter() {
+        var counter = new AtomicLong();
+        when(nextValueSupplier.get())
+                .thenAnswer(invocation -> String.valueOf(counter.incrementAndGet()));
+    }
+
+    @When("the next encrypted value is requested {int} times in parallel by {int} threads")
+    public void theNextEncryptedValueIsRequestedTimesInParallelByThreads(int times, int threadsCount) {
+        var throwable = catchThrowable(() -> {
+            var executor = Executors.newFixedThreadPool(threadsCount);
+            try {
+                var futures = IntStream.range(0, times)
+                        .mapToObj(i -> executor.submit(sequenceEncryptor::getNextEncrypted))
+                        .toList();
+
+                concurrentEncryptedValues = futures.stream()
+                        .map(this::waitForResult)
+                        .toList();
+            } finally {
+                executor.shutdown();
+            }
+        });
+        textWorld.setLastException(throwable);
+    }
+
+    @Then("all encrypted values are distinct")
+    public void allEncryptedValuesAreDistinct() {
+        assertThat(concurrentEncryptedValues.stream().distinct().count())
+                .as("distinct encrypted values out of %s", concurrentEncryptedValues.size())
+                .isEqualTo(concurrentEncryptedValues.size());
+    }
+
+    /**
+     * Waits for a parallel-task result, rethrowing the task failure (if any) as {@link IllegalStateException}.
+     *
+     * @param future future to wait for
+     * @param <T>    result type
+     * @return future result
+     */
+    private <T> T waitForResult(Future<T> future) {
+        try {
+            return future.get(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new IllegalStateException("Parallel encryption task failed", e);
+        }
     }
 
     @When("the next encrypted value is requested")

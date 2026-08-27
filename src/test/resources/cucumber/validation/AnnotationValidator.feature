@@ -31,3 +31,8 @@ Feature: Annotation Validator
     Given a test object with circular reference
     When the object is validated
     Then no exception should be thrown
+
+  Scenario: validating an object with a write-only property
+    Given a test object with a write-only property
+    When the object is validated
+    Then no exception should be thrown

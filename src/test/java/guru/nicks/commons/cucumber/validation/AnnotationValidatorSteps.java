@@ -89,6 +89,18 @@ public class AnnotationValidatorSteps {
         testObject = parent;
     }
 
+    @Given("a test object with a write-only property")
+    public void aTestObjectWithAWriteOnlyProperty() {
+        var object = WriteOnlyPropertyTestObject.builder()
+                .name("Valid Name")
+                .build();
+
+        // write-only property (setter without getter) - must be skipped during nested validation, not NPE
+        object.setSecret("secret value");
+
+        testObject = object;
+    }
+
     @When("the object is validated")
     public void theObjectIsValidated() {
         textWorld.setLastException(catchThrowable(() ->
@@ -130,6 +142,19 @@ public class AnnotationValidatorSteps {
 
         private final String name;
         private CircularTestObject reference;
+
+    }
+
+    @Getter
+    @Builder
+    public static class WriteOnlyPropertyTestObject {
+
+        @NotBlank
+        private final String name;
+
+        // deliberately no getter: write-only properties must be skipped by nested validation
+        @Setter
+        private String secret;
 
     }
 

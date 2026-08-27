@@ -83,6 +83,11 @@ public class CryptoUtilsSteps {
         publicKey = null;
     }
 
+    @Given("a null RSA private key")
+    public void aNullRsaPrivateKey() {
+        privateKey = null;
+    }
+
     @When("the byte array is encoded to Base64")
     public void theByteArrayIsEncodedToBase64() {
         encodedString = CryptoUtils.encodeBase64(inputBytes);
@@ -110,7 +115,11 @@ public class CryptoUtilsSteps {
 
     @When("the encrypted result is decrypted with RSA private key")
     public void theEncryptedResultIsDecryptedWithRsaPrivateKey() {
-        decryptedBytes = CryptoUtils.rsaDecrypt(encryptedBytes, privateKey);
+        try {
+            decryptedBytes = CryptoUtils.rsaDecrypt(encryptedBytes, privateKey);
+        } catch (Exception e) {
+            textWorld.setLastException(e);
+        }
     }
 
     @When("the byte array is encrypted with AES")

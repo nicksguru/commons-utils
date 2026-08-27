@@ -146,7 +146,7 @@ public class CryptoUtils {
     @ConstraintArguments
     public byte[] rsaDecrypt(byte[] encrypted, PrivateKey privateKey) {
         checkNotNull(encrypted, _CryptoUtilsRsaDecryptArgumentsMeta.ENCRYPTED.name());
-        checkNotNull(encrypted, _CryptoUtilsRsaDecryptArgumentsMeta.PRIVATEKEY.name());
+        checkNotNull(privateKey, _CryptoUtilsRsaDecryptArgumentsMeta.PRIVATEKEY.name());
 
         var cipher = Cipher.getInstance(RSA_ALGORITHM);
         cipher.init(Cipher.DECRYPT_MODE, privateKey);

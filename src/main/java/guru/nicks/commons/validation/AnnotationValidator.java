@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Objects;
 
 import static java.util.function.Predicate.not;
 
@@ -79,6 +80,8 @@ public class AnnotationValidator {
         // validate all nested complex properties, including collections
         Arrays.stream(PropertyUtils.getPropertyDescriptors(obj.getClass()))
                 .map(PropertyDescriptor::getReadMethod)
+                // write-only properties (setter without getter) have no read method - skip them
+                .filter(Objects::nonNull)
                 .map(readMethod -> {
                     try {
                         return readMethod.invoke(obj);

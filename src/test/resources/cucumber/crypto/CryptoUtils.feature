@@ -63,3 +63,11 @@ Feature: Crypto Service
     And RSA key pair is available
     When the byte array is encrypted with RSA public key
     Then the exception message should contain "plainText"
+
+  Scenario: RSA decryption with null private key
+    Given a byte array with content "Valid content"
+    And RSA key pair is available
+    And a null RSA private key
+    When the byte array is encrypted with RSA public key
+    And the encrypted result is decrypted with RSA private key
+    Then the exception message should contain "privateKey"

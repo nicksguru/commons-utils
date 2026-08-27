@@ -244,7 +244,7 @@ public class TextUtils {
      * @return {@code true} if {@code value} is not all-zero, including null/blank
      */
     public static boolean notAllZeroes(@Nullable String value) {
-        if (value == null) {
+        if (StringUtils.isBlank(value)) {
             return true;
         }
 

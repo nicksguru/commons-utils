@@ -26,3 +26,15 @@ Feature: Zstd Compressor Service
     Given invalid zstd-compressed data
     When the data is decompressed using Zstd
     Then an exception should be thrown
+
+  Scenario: Decompressing a frame without embedded content size
+    Given zstd-compressed data without content size
+    When the data is decompressed using Zstd
+    Then an exception should be thrown
+    And the exception message should contain "unknown"
+
+  Scenario: Decompressing a frame whose decompressed size exceeds the limit
+    Given zstd-compressed data with decompressed size exceeding the limit
+    When the data is decompressed using Zstd
+    Then an exception should be thrown
+    And the exception message should contain "exceeds"

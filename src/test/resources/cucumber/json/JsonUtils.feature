@@ -20,3 +20,12 @@ Feature: JsonUtils
     Given input is ""
     When sensitive JSON fields are masked
     Then masked JSON is empty
+
+  Scenario: Sort set elements in canonical JSON
+    When canonical JSON is computed for a top-level set in non-sorted iteration order
+    Then canonical JSON should be "[\"apple\",\"banana\",\"cherry\"]"
+
+  Scenario: Equal sets with different iteration order produce identical canonical JSON
+    When canonical JSON is computed for two objects containing equal sets in different iteration order
+    Then both canonical JSON outputs should be identical
+    And both canonical JSON outputs should be "{\"tags\":[\"apple\",\"banana\",\"cherry\"]}"

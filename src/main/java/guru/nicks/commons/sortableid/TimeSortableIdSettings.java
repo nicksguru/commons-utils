@@ -11,10 +11,43 @@ import java.time.Instant;
  * {@link #DEFAULT} settings let generate sortable IDs during 544 years since the custom Epoch. The ID length varies
  * from 10 to 22 characters (14 characters for sequence values ranging from 1_050_000 to 33_000_000; start DB sequences
  * with 1_050_000 to see 14 characters right away and during quite a time).
+ * <p>
+ * NOTE: the collaborator getters sit on the ID generation hot path, therefore implementations returning stateless
+ * collaborators should cache them and return shared instances instead of allocating a new one per call - see
+ * {@link #DEFAULT} which follows the {@link CrockfordBase32SequenceEncoder#INSTANCE} precedent.
  */
 public interface TimeSortableIdSettings {
 
     TimeSortableIdSettings DEFAULT = new TimeSortableIdSettings() {
+
+        /**
+         * Stateless collaborators, initialized eagerly and shared between all calls; DEFAULT is a singleton, so these
+         * fields are effectively static (neither private static fields nor private nested holders are legal in
+         * interfaces, and anonymous classes cannot declare static fields).
+         */
+        private final Encoder<Instant> timestampEncoder = new SubsecondTimestampEncoder(
+                CrockfordBase32SequenceEncoder.INSTANCE,
+                getPaddedTimestampLength(), getSubsecondBits(), getDecodeTimestampRoundSecondFraction());
+
+        private final TimeSortableIdComposer idComposer = new TimeSortableIdComposer(getPaddedTimestampLength());
+
+        private final TimeSortableIdChecksummer idChecksummer = new TimeSortableIdChecksummer(
+                idComposer, getSequenceEncoder());
+
+        @Override
+        public Encoder<Instant> getTimestampEncoder() {
+            return timestampEncoder;
+        }
+
+        @Override
+        public Encoder<EncodedTimeSortableIdComponents> getIdComposer() {
+            return idComposer;
+        }
+
+        @Override
+        public Checksummer getIdChecksummer() {
+            return idChecksummer;
+        }
     };
 
     /**

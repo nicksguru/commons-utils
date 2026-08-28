@@ -60,6 +60,19 @@ Feature: Custom epoch (time-sortable ID generation)
       | 00N88R00L3D             |                          |                    | not in alphabet ('L')          |
       | 00n88r00235             |                          |                    | not in alphabet (lowercase)    |
       | 000000000ZB             | 2024-08-24T00:00:00Z     | 100                |                                |
-      | 02CEW010AA0000          | 2025-12-01T00:00:00.505Z | 1048576            |                                |
-      | 069VYR000A000008        | 2028-01-01T00:00:00Z     | 1073741824         |                                |
+      | 02CEW010AA0000          | 2025-12-01T00:00:00.505Z | 1048576           |                                |
+      | 069VYR000A000008        | 2028-01-01T00:00:00Z     | 1073741824        |                                |
       | ZZ7DV00007ZZZZZZZZZZZE  | 2568-08-24T00:00:00Z     | 922337203685477579 | max. sequence & timestamp      |
+
+  Scenario: Generated ID round-trips back to the original values
+    Given input is "1050123"
+    And date is "2025-12-01T12:34:56.789Z"
+    When sequence number is converted to time-sortable
+    And generated ID is decoded back
+    Then output should be "1050123"
+    And decoded timestamp is within the maximum encoded timestamp delta
+
+  Scenario: Default settings reuse stateless collaborators between calls
+    Then default timestamp encoder is reused between calls
+    And default ID composer is reused between calls
+    And default ID checksummer is reused between calls

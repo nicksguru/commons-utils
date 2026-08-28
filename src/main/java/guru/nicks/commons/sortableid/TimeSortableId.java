@@ -75,10 +75,6 @@ public class TimeSortableId extends TimeSortableIdComponents {
                 .encodedSequence(CONFIG.getSequenceEncoder().encode(sequence * 10L + checkDigit))
                 .build();
         id = CONFIG.getIdComposer().encode(idComponents);
-
-        TimeSortableIdComponents decoded = decode(id).orElseThrow(() ->
-                new IllegalStateException("ID just generated can't be decoded"));
-        validateGeneratedId(this, decoded);
     }
 
     /**
@@ -128,37 +124,6 @@ public class TimeSortableId extends TimeSortableIdComponents {
      */
     public static boolean isValid(String id) {
         return decode(id).isPresent();
-    }
-
-    /**
-     * Compares values extracted out of the ID to the original ones. Needed to ensure the values encoded can be decoded
-     * correctly. If the timestamps differ more than {@link TimeSortableIdSettings#getMaxEncodedTimestampDeltaMs}, an
-     * error message is logged, but no exception is thrown - because the 'too much' cannot be defined strictly.
-     *
-     * @param before values before encoding
-     * @param after  values after encoding
-     * @throws IllegalStateException sequence decoded is not equal to the original one
-     */
-    protected void validateGeneratedId(TimeSortableIdComponents before, TimeSortableIdComponents after) {
-        if (before.getSequence() != after.getSequence()) {
-            throw new IllegalStateException("ID generated decodes incorrectly (sequence)");
-        }
-
-        if (before.getTimestamp().getNano() == after.getTimestamp().getNano()) {
-            return;
-        }
-
-        if (log.isTraceEnabled()) {
-            log.trace("Subseconds altered after encoding: (limit {}ms): {} -> {}",
-                    CONFIG.getMaxEncodedTimestampDeltaMs(), before.getTimestamp(), after.getTimestamp());
-        }
-
-        // log insufficient timestamp precision
-        if (Math.abs(before.getTimestamp().toEpochMilli() - after.getTimestamp().toEpochMilli())
-                > CONFIG.getMaxEncodedTimestampDeltaMs()) {
-            log.error("ID generated decodes incorrectly (timestamp): {} -> {} - delta exceeds {}ms",
-                    before.getTimestamp(), after.getTimestamp(), CONFIG.getMaxEncodedTimestampDeltaMs());
-        }
     }
 
 }

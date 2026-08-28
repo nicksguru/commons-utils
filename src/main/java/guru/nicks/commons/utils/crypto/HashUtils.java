@@ -45,7 +45,7 @@ public enum HashUtils {
         @Override
         protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
             byte[] hash = Longs.toByteArray(
-                    LongHashFunction.xx3().hashBytes(source));
+                    XX3_HASH_FUNCTION.hashBytes(source));
 
             // complete hash was requested
             if (hashLengthBytes == hash.length) {
@@ -98,6 +98,8 @@ public enum HashUtils {
         protected byte[] computeInternal(byte[] source, int hashLengthBytes) {
             byte[] target = new byte[hashLengthBytes];
 
+            // deliberately NOT hoisted to a static field: SHA3Digest is a stateful sponge (not thread-safe) and the
+            // shortened length varies per call - a shared instance would corrupt concurrent hashes
             // always use SHA3-256 for consistency, as SHA-512 results differ from SHA3-256 significantly
             var digest = new ShortenedDigest(new SHA3Digest(256), target.length);
             digest.update(source, 0, source.length);
@@ -248,6 +250,12 @@ public enum HashUtils {
             return new byte[]{(byte) digit};
         }
     };
+
+    /**
+     * Stateless and immutable, therefore thread-safe - shared by all {@link #XXHASH3} computations instead of being
+     * re-created per call.
+     */
+    private static final LongHashFunction XX3_HASH_FUNCTION = LongHashFunction.xx3();
 
     /**
      * Computes hash of default length.

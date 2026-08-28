@@ -3,15 +3,12 @@ package guru.nicks.commons.encoder;
 import am.ik.yavi.meta.ConstraintArguments;
 import com.google.common.primitives.Longs;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
-import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 
 /**
  * Base10-to-BaseN <i>numeric</i> conversion, not a bitwise ('take {@link Longs#toByteArray(long)} and encode the
@@ -25,9 +22,9 @@ public class BaseNSequenceEncoder implements PaddingEncoder<Long> {
     private final String encodedZero;
 
     /**
-     * Keys are numbers from 0 to N, values are their BaseN representations.
+     * Indexes are numbers from 0 to N-1, values are their BaseN representations.
      */
-    private final Map<Long, Character> encodeTable;
+    private final char[] encodeTable;
 
     /**
      * Keys are BaseN characters, values are their decimal equivalents - numbers from 0 to N.
@@ -52,15 +49,18 @@ public class BaseNSequenceEncoder implements PaddingEncoder<Long> {
                 .constraint(str -> StringUtils.deleteWhitespace(str).equals(str), "has whitespaces")
                 .constraint(str -> str.chars().distinct().count() == str.length(), "has duplicate characters");
 
-        var tmpEncodeTable = new HashMap<Long, Character>();
+        var tmpEncodeTable = new char[alphabet.length()];
+        var tmpDecodeTable = new HashMap<Character, Long>();
+
         // populate tables
         for (int i = 0; i < alphabet.length(); i++) {
             char chr = alphabet.charAt(i);
-            tmpEncodeTable.put((long) i, chr);
+            tmpEncodeTable[i] = chr;
+            tmpDecodeTable.put(chr, (long) i);
         }
 
-        encodeTable = Map.copyOf(tmpEncodeTable);
-        decodeTable = Map.copyOf(MapUtils.invertMap(encodeTable));
+        encodeTable = tmpEncodeTable;
+        decodeTable = Map.copyOf(tmpDecodeTable);
         radix = alphabet.length();
         encodedZero = String.valueOf(alphabet.charAt(0));
 
@@ -81,19 +81,15 @@ public class BaseNSequenceEncoder implements PaddingEncoder<Long> {
             return encodedZero;
         }
 
-        var chars = new LinkedList<Character>();
+        // divide by radix until the remainder (quotient) becomes 0; digits come out least-significant first
+        var builder = new StringBuilder(maxEncodedLength);
 
-        // divide by radix until the remainder (quotient) becomes 0
         for (long remainder = sequence; remainder > 0; remainder = Math.floorDiv(remainder, radix)) {
-            long decimalValue = remainder % radix;
-            Character chr = encodeTable.get(decimalValue);
-            checkNotNull(chr, "Base" + radix + " character for decimal " + decimalValue);
-            chars.addFirst(chr);
+            // direct array indexing: no boxing, no map lookup, no per-digit node allocation
+            builder.append(encodeTable[(int) (remainder % radix)]);
         }
 
-        var builder = new StringBuilder();
-        chars.forEach(builder::append);
-        return builder.toString();
+        return builder.reverse().toString();
     }
 
     @ConstraintArguments

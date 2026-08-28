@@ -9,7 +9,6 @@ import org.apache.commons.lang3.Strings;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Locale;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.check;
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotBlank;
@@ -25,7 +24,7 @@ public class AuthUtils {
     public static final String BEARER_AUTH_PREFIX = BEARER_AUTH_TYPE + " ";
 
     /**
-     * Each placeholder is a checksum flavor: SHA256 (slow but cryptographic-grade), XXHash64 (very fast but not
+     * Checksum flavor markers: SHA256 (slow but cryptographic-grade), XXHash64 (very fast but not
      * cryptographic-grade, i.e. it's easy to invent an input string yielding the given hash value). The goal of
      * employing multiple algorithms is to avoid collisions (the checksum is used to deny access to blocked tokens,
      * which is a very sensitive decision). Thus, if one algorithm yields a collision for a token, the other does not
@@ -34,7 +33,9 @@ public class AuthUtils {
      * WARNING: the resulting string must not contain '=', ':' and any other special characters because it's also used
      * as part of JMX bean search string.
      */
-    private static final String ACCESS_TOKEN_CHECKSUM_TEMPLATE = "sha256[%s]_xxh64[%s]";
+    private static final String SHA256_CHECKSUM_PREFIX = "sha256[";
+    private static final String XXHASH64_CHECKSUM_MIDDLE = "]_xxh64[";
+    private static final String CHECKSUM_SUFFIX = "]";
 
     /**
      * For consistency, this method is the <b>only</b> one that knows how to calculate access token checksum based on
@@ -50,9 +51,11 @@ public class AuthUtils {
         checkNotBlank(accessTokenValue, _AuthUtilsCalculateAccessTokenChecksumArgumentsMeta.ACCESSTOKENVALUE.name());
         byte[] bytes = accessTokenValue.getBytes(StandardCharsets.UTF_8);
 
-        return String.format(Locale.US, ACCESS_TOKEN_CHECKSUM_TEMPLATE,
-                HashUtils.SHA_256.computeHex(bytes),
-                HashUtils.XXHASH3.computeHex(bytes));
+        // plain concatenation instead of String.format (which parses the template and allocates a Formatter per
+        // call): '%s' of a String is locale-independent, so the output is byte-identical to the former format form
+        return SHA256_CHECKSUM_PREFIX + HashUtils.SHA_256.computeHex(bytes)
+                + XXHASH64_CHECKSUM_MIDDLE + HashUtils.XXHASH3.computeHex(bytes)
+                + CHECKSUM_SUFFIX;
     }
 
     /**

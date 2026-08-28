@@ -9,7 +9,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Russian morphology utility methods for lemmatization using the AOT library.
@@ -22,8 +21,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class RussianUtils {
 
     /**
-     * Cached method handles for Russian morphological analysis, or {@code null} if not available. Uses
-     * {@link AtomicReference} for thread-safe lazy initialization.
+     * Marks that the one-time initialization of the morphology method handles has already been attempted (successfully
+     * or not), so subsequent calls skip it. Set inside the {@code synchronized (RussianUtils.class)} block of
+     * {@link #initializeMethodHandlesOnce()}.
      */
     private static boolean initializedOrFailed;
 

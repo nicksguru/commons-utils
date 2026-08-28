@@ -14,6 +14,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.objenesis.Objenesis;
 import org.springframework.objenesis.ObjenesisStd;
 
 import java.lang.annotation.Annotation;
@@ -43,6 +44,8 @@ import static java.util.function.Predicate.not;
 public class ReflectionUtils {
 
     /**
+     * Needed mostly during application startup, therefore expires after 24 hours.
+     *
      * @see #getClassHierarchy(Class)
      */
     private static final Cache<Class<?>, Set<Class<?>>> CLASS_HIERARCHY_CACHE = Caffeine.newBuilder()
@@ -51,6 +54,8 @@ public class ReflectionUtils {
             .build();
 
     /**
+     * Needed mostly during application startup, therefore expires after 24 hours.
+     *
      * @see #getClassHierarchyMethods(Class)
      */
     private static final Cache<Class<?>, Set<Method>> CLASS_HIERARCHY_METHODS_CACHE = Caffeine.newBuilder()
@@ -59,12 +64,29 @@ public class ReflectionUtils {
             .build();
 
     /**
+     * Needed mostly during application startup, therefore expires after 24 hours.
+     *
      * @see #findMaterializedGenericType(Class, Class, Class)
      */
     private static final Cache<String, Class<?>> MATERIALIZED_GENERIC_TYPE_CACHE = Caffeine.newBuilder()
             .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
             .expireAfterAccess(Duration.ofHours(24))
             .build();
+
+    /**
+     * Needed mostly during application startup, therefore expires after 24 hours.
+     *
+     * @see #findAnnotatedMethods(Class, Class)
+     */
+    private static final Cache<AnnotatedMethodsKey, List<Method>> ANNOTATED_METHODS_CACHE = Caffeine.newBuilder()
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .expireAfterAccess(Duration.ofHours(24))
+            .build();
+
+    /**
+     * {@link ObjenesisStd} is thread-safe and caches instantiators internally, so a single shared instance suffices.
+     */
+    private static final Objenesis OBJENESIS = new ObjenesisStd(true);
 
     /**
      * Traverses class hierarchy graph (once; leverages caching) - collects all superclasses and superinterfaces.
@@ -113,7 +135,7 @@ public class ReflectionUtils {
 
     /**
      * Among {@link #getClassHierarchyMethods(Class)}, finds those annotated (directly or via subclasses / merged
-     * annotations) with the given annotation.
+     * annotations) with the given annotation (once; leverages caching).
      *
      * @param clazz           class to start discovery at
      * @param annotationClass annotation class
@@ -123,8 +145,10 @@ public class ReflectionUtils {
     public static List<Method> findAnnotatedMethods(Class<?> clazz, Class<? extends Annotation> annotationClass) {
         checkNotNull(annotationClass, _ReflectionUtilsFindAnnotatedMethodsArgumentsMeta.ANNOTATIONCLASS.name());
 
-        return findHierarchyMethods(clazz, method ->
-                AnnotatedElementUtils.hasAnnotation(method, annotationClass));
+        // 'get' method may return null as per Caffeine specs, but never does in this particular case
+        return ANNOTATED_METHODS_CACHE.get(
+                new AnnotatedMethodsKey(clazz, annotationClass),
+                WithoutCache::findAnnotatedMethodsWithoutCache);
     }
 
     /**
@@ -212,9 +236,7 @@ public class ReflectionUtils {
         // WARNING: this approach bypasses field initializers!
         catch (BeanInstantiationException e1) {
             try {
-                return new ObjenesisStd(true)
-                        .getInstantiatorOf(clazz)
-                        .newInstance();
+                return OBJENESIS.newInstance(clazz);
             } catch (Exception e2) {
                 throw new BeanInstantiationException(clazz, "Failed to instantiate [" + clazz.getName() + "]: "
                         + e2.getMessage(), e2);
@@ -267,6 +289,16 @@ public class ReflectionUtils {
                 || obj instanceof Boolean
                 || obj instanceof Character
                 || obj.getClass().isPrimitive();
+    }
+
+    /**
+     * Cache key for {@link #ANNOTATED_METHODS_CACHE}. Strong keys are intentional: Caffeine weak keys switch to
+     * identity comparison, which would break record value equality.
+     */
+    private record AnnotatedMethodsKey(
+
+            Class<?> clazz,
+            Class<? extends Annotation> annotation) {
     }
 
     private static class WithoutCache {
@@ -328,6 +360,14 @@ public class ReflectionUtils {
             }
 
             return methods;
+        }
+
+        /**
+         * Called on cache miss from {@link #ANNOTATED_METHODS_CACHE}.
+         */
+        private static List<Method> findAnnotatedMethodsWithoutCache(AnnotatedMethodsKey key) {
+            return findHierarchyMethods(key.clazz(), method ->
+                    AnnotatedElementUtils.hasAnnotation(method, key.annotation()));
         }
 
         /**

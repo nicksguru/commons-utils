@@ -28,8 +28,8 @@ import java.util.function.Function;
 public interface BusinessExceptionProvider {
 
     /**
-     * Returns a function that creates instances of {@link #getExceptionClass()}. Default implementation calls
-     * {@link ExceptionUtils#getBusinessExceptionFactory(Class)}.
+     * Returns a function that creates instances of {@link #getExceptionClass()}. Default implementation delegates to
+     * {@link ExceptionUtils#getBusinessExceptionFactory(Class)}. Repeated lookups are absorbed by its cache.
      *
      * @return a function that accepts a cause ({@link Throwable}) and creates instances of the exception class
      */

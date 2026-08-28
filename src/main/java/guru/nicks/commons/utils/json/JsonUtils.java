@@ -37,7 +37,7 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
- * Text-related utility methods.
+ * JSON-related utility methods.
  */
 @UtilityClass
 public class JsonUtils {

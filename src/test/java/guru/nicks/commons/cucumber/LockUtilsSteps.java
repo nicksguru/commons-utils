@@ -35,6 +35,7 @@ public class LockUtilsSteps {
     private final AtomicInteger result = new AtomicInteger(0);
     private final AtomicBoolean optimisticReadRetried = new AtomicBoolean(false);
     private final AtomicBoolean writeLockAcquired = new AtomicBoolean(false);
+    private final AtomicInteger supplierEvaluations = new AtomicInteger(0);
     private final List<Integer> threadResults = new ArrayList<>();
 
     int threadCount;
@@ -48,6 +49,7 @@ public class LockUtilsSteps {
         lock = new StampedLock();
         optimisticReadRetried.set(false);
         writeLockAcquired.set(false);
+        supplierEvaluations.set(0);
         threadResults.clear();
     }
 
@@ -111,6 +113,18 @@ public class LockUtilsSteps {
         // create custom implementation to track if retry happens
         StampedLock trackedLock = new StampedLock() {
             @Override
+            public long tryOptimisticRead() {
+                long stamp = super.tryOptimisticRead();
+
+                // stamp 0 means a write lock is held: the utility skips validate() and retries with a real read lock
+                if (stamp == 0) {
+                    optimisticReadRetried.set(true);
+                }
+
+                return stamp;
+            }
+
+            @Override
             public boolean validate(long stamp) {
                 boolean valid = super.validate(stamp);
 
@@ -130,6 +144,18 @@ public class LockUtilsSteps {
     public void theOptimisticReadLockIsUsedWithWriteContention() {
         // create custom implementation to track if retry happens
         StampedLock trackedLock = new StampedLock() {
+            @Override
+            public long tryOptimisticRead() {
+                long stamp = super.tryOptimisticRead();
+
+                // stamp 0 means a write lock is held: the utility skips validate() and retries with a real read lock
+                if (stamp == 0) {
+                    optimisticReadRetried.set(true);
+                }
+
+                return stamp;
+            }
+
             @Override
             public boolean validate(long stamp) {
                 boolean valid = super.validate(stamp);
@@ -259,6 +285,42 @@ public class LockUtilsSteps {
         }));
     }
 
+    @When("the optimistic read lock is used with a counting supplier and an always-invalid optimistic stamp")
+    public void theOptimisticReadLockIsUsedWithACountingSupplierAndAnAlwaysInvalidOptimisticStamp() {
+        // stamp 0 is exactly what a held write lock produces: the optimistic read can never validate
+        StampedLock forcedInvalidStampLock = new StampedLock() {
+            @Override
+            public long tryOptimisticRead() {
+                return 0L;
+            }
+        };
+
+        supplierEvaluations.set(0);
+        textWorld.setLastException(catchThrowable(() ->
+                result.set(LockUtils.withOptimisticReadOrRetry(forcedInvalidStampLock, () -> {
+                    supplierEvaluations.incrementAndGet();
+                    return 42;
+                }))));
+    }
+
+    @When("the optimistic read lock is used with a counting supplier and a failing validation")
+    public void theOptimisticReadLockIsUsedWithACountingSupplierAndAFailingValidation() {
+        // validation always fails: the optimistic attempt is discarded and the supplier re-executed under a read lock
+        StampedLock failingValidationLock = new StampedLock() {
+            @Override
+            public boolean validate(long stamp) {
+                return false;
+            }
+        };
+
+        supplierEvaluations.set(0);
+        textWorld.setLastException(catchThrowable(() ->
+                result.set(LockUtils.withOptimisticReadOrRetry(failingValidationLock, () -> {
+                    supplierEvaluations.incrementAndGet();
+                    return 42;
+                }))));
+    }
+
     @When("the optimistic read lock is used")
     public void theOptimisticReadLockIsUsed() {
         textWorld.setLastException(catchThrowable(() ->
@@ -285,6 +347,18 @@ public class LockUtilsSteps {
     @Then("the optimistic read should be retried with a real read lock")
     public void theOptimisticReadShouldBeRetriedWithARealReadLock() {
         assertThat(optimisticReadRetried.get()).as("optimisticReadRetried").isTrue();
+    }
+
+    @Then("the supplier should be evaluated exactly once")
+    public void theSupplierShouldBeEvaluatedExactlyOnce() {
+        // the wasted evaluation against the invalid (zero) stamp must not happen - only the read-lock retry runs
+        assertThat(supplierEvaluations.get()).as("supplierEvaluations").isEqualTo(1);
+    }
+
+    @Then("the supplier should be evaluated exactly twice")
+    public void theSupplierShouldBeEvaluatedExactlyTwice() {
+        // one optimistic attempt (discarded on failed validation) plus one retry under the read lock
+        assertThat(supplierEvaluations.get()).as("supplierEvaluations").isEqualTo(2);
     }
 
     @Then("the write lock should be released after completion")

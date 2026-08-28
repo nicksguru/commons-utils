@@ -15,9 +15,9 @@ import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotNull;
 public class LockUtils {
 
     /**
-     * Executes the given resultSupplier using the optimistic read lock mode. If this mode fails (someone acquired a
-     * write lock meanwhile, for example with {@link #withExclusiveLock(StampedLock, Supplier)}), the
-     * <b>resultSupplier is re-executed</b> with a real read lock, which means waiting until the exclusive lock gets
+     * Executes the given supplier using the optimistic read lock mode. If someone acquired a write lock meanwhile, for
+     * example with {@link #withExclusiveLock(StampedLock, Supplier)}, the
+     * <b>supplier may be re-executed</b> with a read lock, which means waiting until the exclusive lock gets
      * released.
      *
      * @param lock           lock to use: {@link StampedLock#tryOptimisticRead()} is called first and then
@@ -32,10 +32,15 @@ public class LockUtils {
         checkNotNull(resultSupplier, "resultSupplier");
 
         long stamp = lock.tryOptimisticRead();
-        T result = resultSupplier.get();
 
-        if (lock.validate(stamp)) {
-            return result;
+        // stamp 0 means a write lock is currently held: the optimistic read can never validate, so skip the wasted
+        // supplier computation and fall through to the pessimistic path below
+        if (stamp != 0) {
+            T result = resultSupplier.get();
+
+            if (lock.validate(stamp)) {
+                return result;
+            }
         }
 
         // someone acquired write (i.e. exclusive) lock meanwhile - retry with a real lock

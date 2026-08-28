@@ -16,6 +16,18 @@ Feature: LockUtils functionality
     Then the operation should complete successfully
     And the optimistic read should be retried with a real read lock
 
+  Scenario: Supplier is not evaluated against an invalid optimistic stamp
+    Given a StampedLock instance
+    When the optimistic read lock is used with a counting supplier and an always-invalid optimistic stamp
+    Then the operation should complete successfully
+    And the supplier should be evaluated exactly once
+
+  Scenario: Optimistic read retry under failed validation returns the correct result
+    Given a StampedLock instance
+    When the optimistic read lock is used with a counting supplier and a failing validation
+    Then the operation should complete successfully
+    And the supplier should be evaluated exactly twice
+
   Scenario: Exclusive write lock
     Given a StampedLock instance
     When the exclusive write lock is used

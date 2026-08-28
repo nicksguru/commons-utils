@@ -1,5 +1,9 @@
 package guru.nicks.commons.utils.text;
 
+import guru.nicks.commons.cache.domain.CacheConstants;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 import rita.RiTa;
@@ -33,6 +37,11 @@ public class EnglishUtils {
      * gaps that standard algorithmic stemmers (like Postgres Snowball) miss.
      */
     private static final Map<String, String> IRREGULARS = HashMap.newHashMap(350);
+
+    // natural language is Zipf-distributed - a small cache absorbs the overwhelming majority of lookups
+    private static final Cache<String, String> LEMMA_CACHE = Caffeine.newBuilder()
+            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+            .build();
 
     static {
         // ==========================================
@@ -389,7 +398,20 @@ public class EnglishUtils {
             return word;
         }
 
-        word = word.strip().toLowerCase();
+        // normalize before the cache lookup so that case/whitespace variants share a single cache entry
+        String normalizedWord = word.strip().toLowerCase();
+        // 'get' method may return null as per Caffeine specs, but never does in this particular case
+        return LEMMA_CACHE.get(normalizedWord, EnglishUtils::computeWordLemmaWithoutCache);
+    }
+
+    /**
+     * Cache loader for {@link #getWordLemma(String)}: stems the given (already normalized) word and maps irregular
+     * forms to their base lemmas.
+     *
+     * @param word normalized word (lowercase, stripped)
+     * @return lemma, or the stemmed word if it's not a known irregular form
+     */
+    private static String computeWordLemmaWithoutCache(String word) {
         String stem = RiTa.stem(word);
         String regular = IRREGULARS.get(stem);
 

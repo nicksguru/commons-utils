@@ -96,3 +96,20 @@ Feature: TransformUtils
       | 5 | apple   |
       | 6 | banana  |
       | 7 | avocado |
+
+  Scenario: Map with duplicate keys keeps the last value
+    Given a list of strings "apple,avocado,banana"
+    When the list is transformed to a map with first letter as key
+    Then the resulting map with string keys should contain key-value pairs:
+      | a | avocado |
+      | b | banana  |
+
+  Scenario: Map with duplicate keys keeps the last value using two extractors
+    Given a list of strings "apple,avocado"
+    When the list is transformed to a map with first letter as key and uppercase value
+    Then the resulting map with string keys should contain key-value pairs:
+      | a | AVOCADO |
+
+  Scenario: Null collection is transformed to empty map
+    When a null collection is transformed to a map
+    Then the result should be an empty map

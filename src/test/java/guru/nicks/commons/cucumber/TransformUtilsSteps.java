@@ -38,6 +38,7 @@ public class TransformUtilsSteps {
     private Map<Object, ? extends List<?>> groupedResult;
     private Set<String> resultSet;
     private Map<Integer, String> resultMap;
+    private Map<String, String> stringKeyResultMap;
 
     private List<TestObject> testObjects = new ArrayList<>();
     private ComplexObject complexObject;
@@ -329,10 +330,38 @@ public class TransformUtilsSteps {
         resultMap = TransformUtils.toMap(stringList, String::length);
     }
 
+    @When("the list is transformed to a map with first letter as key")
+    public void theListIsTransformedToAMapWithFirstLetterAsKey() {
+        stringKeyResultMap = TransformUtils.toMap(stringList, s -> s.substring(0, 1));
+    }
+
+    @When("the list is transformed to a map with first letter as key and uppercase value")
+    public void theListIsTransformedToAMapWithFirstLetterAsKeyAndUppercaseValue() {
+        stringKeyResultMap = TransformUtils.toMap(stringList, s -> s.substring(0, 1), String::toUpperCase);
+    }
+
+    @When("a null collection is transformed to a map")
+    public void aNullCollectionIsTransformedToAMap() {
+        stringKeyResultMap = TransformUtils.toMap(null, s -> s.substring(0, 1));
+    }
+
     @Then("the resulting map should contain key-value pairs:")
     public void theResultingMapShouldContainKeyValuePairs(DataTable dataTable) {
         Map<Integer, String> expected = dataTable.asMap(Integer.class, String.class);
         assertThat(resultMap).containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Then("the resulting map with string keys should contain key-value pairs:")
+    public void theResultingMapWithStringKeysShouldContainKeyValuePairs(DataTable dataTable) {
+        Map<String, String> expected = dataTable.asMap(String.class, String.class);
+        assertThat(stringKeyResultMap).containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Then("the result should be an empty map")
+    public void theResultShouldBeAnEmptyMap() {
+        assertThat(stringKeyResultMap)
+                .as("stringKeyResultMap")
+                .isEmpty();
     }
 
     /**

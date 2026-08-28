@@ -193,9 +193,10 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to map.
+     * Maps {@link Iterable} to map. Entries with duplicate keys are merged by keeping the value of the last
+     * encountered entry.
      *
-     * @param from         source, can be {@code null}, in which case {@code null} is returned
+     * @param from         source, can be {@code null}, in which case an empty map is returned
      * @param keyExtractor extracts map key from {@code V}
      * @param <K>          map key type
      * @param <V>          map value type
@@ -207,9 +208,10 @@ public class TransformUtils {
     }
 
     /**
-     * Maps {@link Iterable} to map.
+     * Maps {@link Iterable} to map. Entries with duplicate keys are merged by keeping the value of the last
+     * encountered entry.
      *
-     * @param from           source, can be {@code null}, in which case {@code null} is returned
+     * @param from           source, can be {@code null}, in which case an empty map is returned
      * @param keyExtractor   extracts map key from {@code T}
      * @param valueExtractor extracts map value from {@code T}
      * @param <T>            source list type
@@ -225,7 +227,8 @@ public class TransformUtils {
         }
 
         return createStream(from).collect(
-                Collectors.toMap(keyExtractor, valueExtractor));
+                // last one wins on duplicate keys - consistent with Map#put semantics
+                Collectors.toMap(keyExtractor, valueExtractor, (first, second) -> second));
     }
 
     /**

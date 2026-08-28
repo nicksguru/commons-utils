@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static guru.nicks.commons.validation.dsl.ValiDsl.checkNotBlank;
@@ -56,6 +57,21 @@ public class HttpRequestUtils {
     private static final Cache<Integer, Optional<HttpStatus>> HTTP_STATUS_CACHE = Caffeine.newBuilder()
             .expireAfterAccess(14, TimeUnit.DAYS)
             .build();
+
+    /**
+     * @see #createContentDispositionHeaderValue(String, Supplier)
+     */
+    private static final Pattern CR_OR_LF_PATTERN = Pattern.compile("[\\r\\n]");
+
+    /**
+     * @see #createContentDispositionHeaderValue(String, Supplier)
+     */
+    private static final Pattern PATH_SEPARATOR_PATTERN = Pattern.compile("[/\\\\]");
+
+    /**
+     * @see #createContentDispositionHeaderValue(String, Supplier)
+     */
+    private static final Pattern CONTROL_CHARACTER_PATTERN = Pattern.compile("\\p{Cntrl}");
 
     /**
      * Sets response header if its value composed of (comma-separated) parts is not blank.
@@ -181,11 +197,11 @@ public class HttpRequestUtils {
         checkNotBlank(filename, "filename");
 
         // sanitize CRLF to prevent header injection
-        filename = filename.replaceAll("[\\r\\n]", "");
+        filename = CR_OR_LF_PATTERN.matcher(filename).replaceAll("");
         // remove path separators to prevent path traversal
-        filename = filename.replaceAll("[/\\\\]", "");
+        filename = PATH_SEPARATOR_PATTERN.matcher(filename).replaceAll("");
         // remove control characters
-        filename = filename.replaceAll("\\p{Cntrl}", "");
+        filename = CONTROL_CHARACTER_PATTERN.matcher(filename).replaceAll("");
 
         filename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
                 // URL encoding uses + for spaces, but headers need %20

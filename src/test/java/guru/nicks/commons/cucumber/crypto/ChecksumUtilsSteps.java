@@ -11,6 +11,9 @@ import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +54,28 @@ public class ChecksumUtilsSteps {
         sortedJson = JsonUtils.sortObjectKeys(testUser);
         String checksum = ChecksumUtils.computeJsonChecksum(testUser);
         textWorld.setOutput(checksum);
+    }
+
+    @When("JSON checksums are computed for objects containing equal sets in different iteration order")
+    public void jsonChecksumsAreComputedForObjectsWithEqualSets() {
+        // LinkedHashSet iteration order is deterministic and differs between the two objects;
+        // Set.copyOf produces a hash-ordered set like a HashSet would
+        var firstSet = new LinkedHashSet<String>();
+        firstSet.add("banana");
+        firstSet.add("apple");
+        firstSet.add("cherry");
+
+        var secondSet = new LinkedHashSet<String>();
+        secondSet.add("cherry");
+        secondSet.add("banana");
+        secondSet.add("apple");
+
+        var firstObject = Map.of("tags", firstSet);
+        var secondObject = Map.of("tags", Set.copyOf(secondSet));
+
+        sortedJson = JsonUtils.sortObjectKeys(firstObject);
+        firstChecksum = ChecksumUtils.computeJsonChecksum(firstObject);
+        secondChecksum = ChecksumUtils.computeJsonChecksum(secondObject);
     }
 
     @Then("sorted JSON should be {string}")
@@ -97,9 +122,9 @@ public class ChecksumUtilsSteps {
     @Then("output length should be {int}")
     public void outputLengthShouldBe(int expectedLength) {
         String output = textWorld.getOutput().getFirst();
-        assertThat(output.length())
+        assertThat(output)
                 .as("checksum length")
-                .isEqualTo(expectedLength);
+                .hasSize(expectedLength);
     }
 
     @Value

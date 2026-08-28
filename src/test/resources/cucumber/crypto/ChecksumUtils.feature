@@ -61,3 +61,8 @@ Feature: ChecksumUtils
     When JSON checksum is computed for scalar input
     Then output should match Base64 format
     And output length should be 44
+
+  Scenario: Compute identical checksums for equal sets in different iteration order
+    When JSON checksums are computed for objects containing equal sets in different iteration order
+    Then both checksums should be identical
+    And sorted JSON should be "{\"tags\":[\"apple\",\"banana\",\"cherry\"]}"

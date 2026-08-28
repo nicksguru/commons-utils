@@ -2,7 +2,8 @@ package guru.nicks.commons.cucumber.cache;
 
 import guru.nicks.commons.cache.ChecksumCacheKeyGenerator;
 import guru.nicks.commons.cache.domain.CacheConstants;
-import guru.nicks.commons.utils.crypto.ChecksumUtils;
+import guru.nicks.commons.utils.crypto.HashUtils;
+import guru.nicks.commons.utils.json.JsonUtils;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
@@ -15,10 +16,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -125,6 +129,28 @@ public class ChecksumCacheKeyGeneratorSteps {
         anotherGeneratedKey = keyGenerator.generate(targetObject, method, newParams.toArray());
     }
 
+    @When("a checksum cache key is generated with an object containing a set in one order")
+    public void aChecksumCacheKeyIsGeneratedWithAnObjectContainingASetInOneOrder() {
+        // LinkedHashSet keeps insertion order which differs from the natural one
+        var set = new LinkedHashSet<String>();
+        set.add("banana");
+        set.add("apple");
+        set.add("cherry");
+
+        generatedKey = keyGenerator.generate(targetObject, method, Map.of("tags", set));
+    }
+
+    @When("a checksum cache key is generated with an equal object containing the same set in another order")
+    public void aChecksumCacheKeyIsGeneratedWithAnEqualObjectContainingTheSameSetInAnotherOrder() {
+        // Set.copyOf produces a hash-ordered set like a HashSet would
+        var set = new LinkedHashSet<String>();
+        set.add("cherry");
+        set.add("banana");
+        set.add("apple");
+
+        anotherGeneratedKey = keyGenerator.generate(targetObject, method, Map.of("tags", Set.copyOf(set)));
+    }
+
     @When("a checksum cache key is generated with parameter of type {string}")
     public void aChecksumCacheKeyIsGeneratedWithParameterOfType(String paramType) {
         Object param = switch (paramType) {
@@ -165,7 +191,7 @@ public class ChecksumCacheKeyGeneratorSteps {
 
         // verify each checksum
         for (int i = 0; i < parameters.size(); i++) {
-            String expectedChecksum = ChecksumUtils.computeJsonChecksum(parameters.get(i));
+            String expectedChecksum = expectedKeyPart(parameters.get(i));
             assertThat(checksums[i])
                     .as("checksums[%d]", i)
                     .isEqualTo(expectedChecksum);
@@ -183,7 +209,7 @@ public class ChecksumCacheKeyGeneratorSteps {
 
         // generate expected checksums
         List<String> expectedChecksums = parameters.stream()
-                .map(ChecksumUtils::computeJsonChecksum)
+                .map(ChecksumCacheKeyGeneratorSteps::expectedKeyPart)
                 .toList();
 
         // join them with the delimiter
@@ -203,7 +229,7 @@ public class ChecksumCacheKeyGeneratorSteps {
                 .isInstanceOf(String.class);
 
         String key = (String) generatedKey;
-        String expectedChecksum = ChecksumUtils.computeJsonChecksum(complexObject);
+        String expectedChecksum = expectedKeyPart(complexObject);
 
         assertThat(key)
                 .as("key")
@@ -224,6 +250,13 @@ public class ChecksumCacheKeyGeneratorSteps {
                 .isNotEqualTo(anotherGeneratedKey);
     }
 
+    @Then("the two generated keys should be equal")
+    public void theTwoGeneratedKeysShouldBeEqual() {
+        assertThat(generatedKey)
+                .as("generatedKey")
+                .isEqualTo(anotherGeneratedKey);
+    }
+
     @Then("the generated key should equal {string}")
     public void theGeneratedKeyShouldEqual(String expectedChecksum) {
         assertThat(generatedKey)
@@ -236,6 +269,18 @@ public class ChecksumCacheKeyGeneratorSteps {
         assertThat(key)
                 .as("key")
                 .isEqualTo(expectedChecksum);
+    }
+
+    /**
+     * Mirrors the generator's key-part computation: XXHASH3 hex over the canonical JSON of a parameter.
+     *
+     * @param param parameter value, may be {@code null}
+     * @return expected key part for the parameter
+     */
+    private static String expectedKeyPart(Object param) {
+        String canonicalJson = (param == null) ? "" : JsonUtils.sortObjectKeys(param);
+
+        return HashUtils.XXHASH3.computeHex(canonicalJson.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

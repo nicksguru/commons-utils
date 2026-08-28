@@ -35,15 +35,20 @@ Feature: ChecksumCacheKeyGenerator
     And a checksum cache key is generated with parameters "B" and "A"
     Then the two generated keys should be different
 
+  Scenario: Generating the same key for equal objects containing sets in different order
+    When a checksum cache key is generated with an object containing a set in one order
+    And a checksum cache key is generated with an equal object containing the same set in another order
+    Then the two generated keys should be equal
+
   Scenario Outline: Generating cache keys with different parameter types
     When a checksum cache key is generated with parameter of type "<paramType>"
-    Then the generated key should equal "<expectedChecksum>"
+    Then the generated key should equal "<expectedKeyPart>"
     Examples:
-      | paramType    | expectedChecksum                             |
-      | String       | 1VecRt/MfxggcBPmW0Tky04sIpj0rEV7qPgnQ/Mekws= |
-      | Integer      | c0dctApWjo2ooEXO0RATfhWfiQrE2og7axfcZRs6gEk= |
-      | Double       | wHQN0lyd45ucjVq0Uui2m8wL+G8qYO1+Un550KMDWFI= |
-      | Boolean      | tb6kG2xiP3wJ8b8k3K5Y66s8DN2QrZZrxDpFtEhn4Ss= |
-      | List         | es5mBvmVa0bredV+BMD3/f0lFRwJX6U/hZAMcGezTow= |
-      | Map          | tzRBPGROxJ9qfAfYiyZyRFgtZCLYnu6VVRH2s8DcsPI= |
-      | CustomObject | oACJyTK51aLLC3PNjGgKk3myBfQ1hzx/s4Hav+IS7is= |
+      | paramType    | expectedKeyPart     |
+      | String       | 3d5061310b23b3b9    |
+      | Integer      | 1217cb28c0ef2191    |
+      | Double       | be806d59f2d89101    |
+      | Boolean      | 40bbd512750b7629    |
+      | List         | 9ce810e56ce6e90d    |
+      | Map          | 76f493969db4cf18    |
+      | CustomObject | 495ad01a45199df6    |

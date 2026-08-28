@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 import java.util.Map;
 
 /**
- * HTTP status 429. All exceptions having the same HTTP status must inherit from this one.
+ * HTTP status 410. All exceptions having the same HTTP status must inherit from this one.
  */
 @RootHttpStatus(HttpStatus.GONE)
 @StandardException

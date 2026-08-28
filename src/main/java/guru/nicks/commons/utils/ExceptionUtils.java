@@ -14,10 +14,8 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Formats stack traces.
@@ -27,8 +25,8 @@ public class ExceptionUtils {
 
     /**
      * Class-name prefixes of trivial infrastructure frames (reflection and proxying machinery, servlet API and filter
-     * chains, web and messaging dispatch, HTTP client and resilience decorators, servlet containers) omitted from
-     * stack traces by {@link #formatWithCompactStackTrace(Throwable)}. A frame is omitted when its class name
+     * chains, web and messaging dispatch, HTTP client and resilience decorators, servlet containers) omitted from stack
+     * traces by {@link #formatWithCompactStackTrace(Throwable)}. A frame is omitted when its class name
      * {@code startsWith} any of these prefixes; package-scoped prefixes end with a dot.
      */
     public static final Set<String> OMITTED_CLASS_PREFIXES = Set.of(
@@ -126,16 +124,43 @@ public class ExceptionUtils {
             }
         }
 
-        String stackTrace = Arrays.stream(t.getStackTrace())
-                .filter(frame -> OMITTED_CLASS_PREFIXES.stream().noneMatch(frame.getClassName()::startsWith))
-                .map(StackTraceElement::toString)
-                .collect(Collectors.joining("\n    at "));
+        var traceBuilder = new StringBuilder(256);
+
+        for (StackTraceElement frame : t.getStackTrace()) {
+            if (isOmitted(frame)) {
+                continue;
+            }
+
+            if (!traceBuilder.isEmpty()) {
+                traceBuilder.append("\n    at ");
+            }
+
+            traceBuilder.append(frame);
+        }
 
         messageBuilder
                 .append(". Stack trace with trivial frames omitted:\n    ")
-                .append(stackTrace);
+                .append(traceBuilder);
 
         return messageBuilder.toString();
+    }
+
+    /**
+     * Checks whether the stack trace frame belongs to trivial infrastructure machinery and must be omitted from the
+     * compact representation.
+     *
+     * @param frame stack trace frame
+     * @return true if the frame's class name starts with any of {@link #OMITTED_CLASS_PREFIXES}
+     */
+    private static boolean isOmitted(StackTraceElement frame) {
+        // plain loop with early return: no Stream/lambda allocation per frame
+        for (String prefix : OMITTED_CLASS_PREFIXES) {
+            if (frame.getClassName().startsWith(prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

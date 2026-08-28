@@ -69,6 +69,12 @@ Feature: Exception formatting utilities
       | guru.nicks.utils.ExceptionUtils                                                     | should        |
       | com.example.MyClass                                                                 | should        |
 
+  Scenario: Compact stack trace joins kept frames with the exact separator
+    Given an exception with a mixed stack trace is created
+    When exception is formatted with compact stack trace
+    Then the kept stack trace frames should be joined with the compact separator
+    And the omitted middle frame should not be present
+
   Scenario: Exception formatting without message omits empty message parentheses
     Given an exception of type "RuntimeException" with message "" is created
     When exception is formatted with compact stack trace

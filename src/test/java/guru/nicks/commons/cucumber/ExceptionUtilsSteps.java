@@ -232,6 +232,42 @@ public class ExceptionUtilsSteps {
         testException = new IllegalStateException("Self-rooted");
     }
 
+    @Given("an exception with a mixed stack trace is created")
+    public void anExceptionWithAMixedStackTraceIsCreated() {
+        testException = new RuntimeException("Mixed frames");
+
+        // kept frame, omitted frame (spring web filter), kept frame - in that order
+        testException.setStackTrace(new StackTraceElement[]{
+                new StackTraceElement("com.example.business.Service", "handleRequest", "Service.java", 10),
+                new StackTraceElement("org.springframework.web.filter.OncePerRequestFilter", "doFilter",
+                        "OncePerRequestFilter.java", 20),
+                new StackTraceElement("com.example.business.Repository", "load", "Repository.java", 30)
+        });
+    }
+
+    @Then("the kept stack trace frames should be joined with the compact separator")
+    public void theKeptStackTraceFramesShouldBeJoinedWithTheCompactSeparator() {
+        assertThat(textWorld.getOutput())
+                .as("output")
+                .isNotEmpty();
+
+        // exact output format: kept frames joined with '\n    at ', the omitted frame absent in between
+        var expectedJoinedFrames = "com.example.business.Service.handleRequest(Service.java:10)"
+                + "\n    at "
+                + "com.example.business.Repository.load(Repository.java:30)";
+
+        assertThat(textWorld.getOutput().getFirst())
+                .as("formatted exception output")
+                .contains(expectedJoinedFrames);
+    }
+
+    @And("the omitted middle frame should not be present")
+    public void theOmittedMiddleFrameShouldNotBePresent() {
+        assertThat(textWorld.getOutput().getFirst())
+                .as("formatted exception output")
+                .doesNotContain("OncePerRequestFilter");
+    }
+
     /**
      * Wraps the current exception into the given number of nested {@link InvocationTargetException}'s, keeping the
      * whole chain (outermost first) to assert the unwrapping depth limit.

@@ -44,3 +44,17 @@ Feature: ResourceUtils
   Scenario: Concurrent cache misses don't serialize behind a global monitor
     When 8 threads concurrently retrieve and cache resource "/cucumber" and "ResourceUtils.feature"
     Then all concurrent retrievals should return the same cached entry
+
+  Scenario: Cached and non-cached lookups return the same resource
+    When resource "/cucumber" and "ResourceUtils.feature" is retrieved without cache
+    And resource "/cucumber" and "ResourceUtils.feature" is retrieved and cached
+    Then both lookups should return the same content
+
+  Scenario: Windows-style separators normalize to the same cache key as forward slashes
+    When resource "/cucumber" and "retry\RetryUtils.feature" is retrieved and cached
+    Then the resource should be found
+    And the cache should contain an entry for "/cucumber/retry/RetryUtils.feature"
+
+  Scenario: Filename traversing above the root resolves to nothing in the cached lookup
+    When resource "/cucumber" and "../../outside.txt" is retrieved and cached
+    Then the resource should not be found

@@ -18,6 +18,7 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.info.GitProperties;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.Resource;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -48,6 +49,9 @@ public class ResourceUtilsSteps {
     private int concurrentThreadCount;
     private Queue<ResourceUtils.CacheEntry> concurrentEntries;
     private Queue<Throwable> concurrentFailures;
+
+    private String uncachedChecksum;
+    private ResourceUtils.CacheEntry cachedEntry;
 
     @Before
     public void beforeEachScenario() {
@@ -172,6 +176,107 @@ public class ResourceUtilsSteps {
     }
 
     /**
+     * Retrieves the resource via the non-cached lookup and records its content checksum.
+     *
+     * @param path     resource path - passed from app config and is trusted
+     * @param filename - passed from web requests and is therefore NOT trusted
+     */
+    @SneakyThrows
+    @When("resource {string} and {string} is retrieved without cache")
+    public void resourceIsRetrievedWithoutCache(String path, String filename) {
+        uncachedChecksum = ResourceUtils.findResource(path, filename)
+                .map(this::checksumOf)
+                .orElse(null);
+    }
+
+    /**
+     * Retrieves the resource via the cached lookup from a cold cache and records the resulting entry.
+     *
+     * @param path     resource path - passed from app config and is trusted
+     * @param filename - passed from web requests and is therefore NOT trusted
+     */
+    @When("resource {string} and {string} is retrieved and cached")
+    public void resourceIsRetrievedAndCached(String path, String filename) {
+        // cold start: guarantee a cache miss so the entry is stored under the freshly normalized key
+        invalidateResourceCache();
+
+        cachedEntry = ResourceUtils.findAndCacheResource(path, filename).orElse(null);
+    }
+
+    @Then("the resource should be found")
+    public void resourceShouldBeFound() {
+        assertThat(cachedEntry)
+                .as("cached entry")
+                .isNotNull();
+    }
+
+    @Then("the resource should not be found")
+    public void resourceShouldNotBeFound() {
+        assertThat(cachedEntry)
+                .as("cached entry")
+                .isNull();
+    }
+
+    /**
+     * Verifies that the cached and non-cached lookups resolved to identical content.
+     */
+    @Then("both lookups should return the same content")
+    public void bothLookupsShouldReturnTheSameContent() {
+        assertThat(uncachedChecksum)
+                .as("checksum from the non-cached lookup")
+                .isNotNull();
+
+        assertThat(cachedEntry)
+                .as("cached entry")
+                .isNotNull();
+
+        assertThat(cachedEntry.checksum())
+                .as("checksum from the cached lookup")
+                .isEqualTo(uncachedChecksum);
+    }
+
+    /**
+     * Verifies that the cache key was built with the same normalization the non-cached lookup uses, so Windows-style
+     * and Unix-style separators of the same logical path share a single cache entry.
+     *
+     * @param expectedKey expected normalized cache key
+     */
+    @SneakyThrows
+    @Then("the cache should contain an entry for {string}")
+    public void cacheShouldContainEntryFor(String expectedKey) {
+        Field cacheField = ResourceUtils.class.getDeclaredField("RESOURCE_CACHE");
+        cacheField.setAccessible(true);
+        // keys are Strings at runtime; the Object-keyed view keeps the wildcard capture from rejecting the lookup
+        Cache<Object, ?> cache = (Cache<Object, ?>) cacheField.get(null);
+
+        assertThat(cache.getIfPresent(expectedKey))
+                .as("cache entry for key '" + expectedKey + "'")
+                .isNotNull();
+    }
+
+    /**
+     * Computes the checksum of the resource content, the same way {@code ResourceUtils} computes cache entry
+     * checksums.
+     *
+     * @param resource resource to read
+     * @return content checksum
+     */
+    @SneakyThrows
+    private String checksumOf(Resource resource) {
+        return ChecksumUtils.computeJsonChecksum(resource.getInputStream().readAllBytes());
+    }
+
+    /**
+     * Invalidates the resource cache.
+     */
+    @SneakyThrows
+    private void invalidateResourceCache() {
+        Field cacheField = ResourceUtils.class.getDeclaredField("RESOURCE_CACHE");
+        cacheField.setAccessible(true);
+        ((Cache<?, ?>) cacheField.get(null)).invalidateAll();
+    }
+
+    /**
      * Retrieves the same classpath resource from the given number of virtual threads, all released simultaneously by a
      * barrier, so cache misses overlap and the lock-free loading path is exercised.
      *
@@ -187,9 +292,7 @@ public class ResourceUtilsSteps {
         concurrentFailures = new ConcurrentLinkedQueue<>();
 
         // cold start: guarantee a cache miss in every thread to exercise concurrent duplicate loading
-        Field cacheField = ResourceUtils.class.getDeclaredField("RESOURCE_CACHE");
-        cacheField.setAccessible(true);
-        ((Cache<?, ?>) cacheField.get(null)).invalidateAll();
+        invalidateResourceCache();
 
         var startBarrier = new CyclicBarrier(threadCount);
 

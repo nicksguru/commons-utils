@@ -174,7 +174,16 @@ public class ResourceUtils {
      * @throws NoSuchElementException resource not found
      */
     public static Optional<CacheEntry> findAndCacheResource(String path, String filename) {
-        String key = normalizePathPrefix(path) + FilenameUtils.normalize(filename);
+        // same normalization as findResource(), so cached and non-cached lookups can't diverge (the 1-arg normalize
+        // is platform-dependent and would accept '\' separators on Windows)
+        String normalizedFilename = FilenameUtils.normalize(filename, true);
+
+        // mirrors findResource(): traversal above root (normalize() = null) or blank names resolve to nothing
+        if (StringUtils.isBlank(normalizedFilename)) {
+            return Optional.empty();
+        }
+
+        String key = normalizePathPrefix(path) + normalizedFilename;
 
         // lock-free hit path - Caffeine is thread-safe, no reason to serialize cache hits behind a global monitor
         CacheEntry cacheEntry = RESOURCE_CACHE.getIfPresent(key);
@@ -342,6 +351,11 @@ public class ResourceUtils {
                 .orElse(0);
     }
 
+    /**
+     * Cached resource content. Note: as a record with a {@code byte[]} component, the inherited
+     * {@code equals()}/{@code hashCode()} use array identity, not content - entries are keyed by resource path and
+     * never compared by content.
+     */
     @Builder(toBuilder = true)
     public record CacheEntry(
 

@@ -36,12 +36,16 @@ public class RetryUtils {
      *
      * @param config          retry configuration
      * @param code            code to execute
-     * @param exceptionLogger Code to invoke on exception after each failed attempt. Exceptions occurred inside
-     *                        {@code exceptionLogger} are logged and never propagated. When called after the very first
-     *                        attempt, {@link Context#getRetriesMade()} is 1.
+     * @param exceptionLogger Code to invoke on exception after each failed attempt - including the final one that
+     *                        exhausts the retry budget. Exceptions occurred inside {@code exceptionLogger} are logged
+     *                        and never propagated. When called after the very first attempt,
+     *                        {@link Context#getRetriesMade()} is 1.
      * @param <T>             result type
      * @return result of successful code execution (if the number of attempts was exceeded, the last exception from
      *         {@code code} is propagated)
+     * @throws IllegalStateException the thread was interrupted while waiting for the next attempt - the interrupt
+     *                               flag is restored and retries are abandoned (instead of busy-retrying with zero
+     *                               delay)
      */
     @SneakyThrows
     public static <T> T getWithRetry(RetryConfig config, Function<Context, T> code,
@@ -64,6 +68,12 @@ public class RetryUtils {
                     exceptionLogger.accept(e, context);
                 } catch (Exception fromLogger) {
                     log.error("Error in exception logger (ignored): {}", fromLogger.getMessage(), fromLogger);
+                }
+
+                // abort only after the logger ran, so the final failure (the one exhausting the retry budget) is
+                // logged just like every other one
+                if (context.getRetriesMade() > context.getMaxRetryAttempts()) {
+                    throw lastException;
                 }
 
                 sleep(context);
@@ -108,14 +118,14 @@ public class RetryUtils {
     }
 
     /**
-     * Creates context with {@link Context#getRetriesMade()} and {@link Context#getNextDelay()} adjusted. Re-throws
-     * {@code lastException} if the number of retries has been exceeded.
+     * Creates context with {@link Context#getRetriesMade()} and {@link Context#getNextDelay()} adjusted. When the
+     * retry budget is exhausted, the returned context's {@link Context#getRetriesMade()} exceeds
+     * {@link Context#getMaxRetryAttempts()} - aborting the retry loop (after logging) is up to the caller.
      *
      * @param context context for the previous attempt
      * @param e       exception from the previous attempt
      * @return context for the next attempt
      */
-    @SneakyThrows
     @ConstraintArguments
     private static Context adjustForNextRetry(RetryUtils.Context context, Exception e) {
         checkNotNull(context, _RetryUtilsAdjustForNextRetryArgumentsMeta.CONTEXT.name());
@@ -125,7 +135,6 @@ public class RetryUtils {
         if (retriesMade >= context.getMaxRetryAttempts()) {
             log.error("Number of attempts reached maximum ({}) after exception: {}", context.getMaxRetryAttempts(),
                     e.getMessage(), e);
-            throw e;
         }
 
         long nextDelayMillis = Math.round(
@@ -147,7 +156,9 @@ public class RetryUtils {
         try {
             Thread.sleep(context.getNextDelay());
         } catch (InterruptedException ex) {
+            // honor cancellation: abort instead of continuing, which would busy-retry with zero delay
             Thread.currentThread().interrupt();
+            throw new IllegalStateException("Retry interrupted, aborting", ex);
         }
     }
 

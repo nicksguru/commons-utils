@@ -28,9 +28,12 @@ public class RetryUtilsSteps {
     private int maxRetryAttempts;
     private String result;
 
+    private int loggerInvocationCount;
+    private int lastLoggerRetriesMade;
+
     @Given("base delay is {int} ms")
     public void setBaseDelay(int milliseconds) {
-        this.baseDelay = Duration.ofMillis(milliseconds);
+        baseDelay = Duration.ofMillis(milliseconds);
     }
 
     @Given("maximum {int} retry attempts")
@@ -43,15 +46,13 @@ public class RetryUtilsSteps {
         var config = createRetryConfig();
 
         var throwable = catchThrowable(() ->
-                result = RetryUtils.getWithRetry(config,
-                        (RetryUtils.Context context) -> {
+                result = RetryUtils.getWithRetry(config, (RetryUtils.Context context) -> {
                             if (attemptCount.incrementAndGet() < succeedAfterInvocations) {
                                 throw new RuntimeException("Planned failure");
                             }
 
                             return "Success";
-                        },
-                        (e, context) -> {}
+                        }, this::recordLoggerInvocation
                 ));
 
         textWorld.setLastException(throwable);
@@ -67,7 +68,32 @@ public class RetryUtilsSteps {
                             attemptCount.incrementAndGet();
                             throw new IllegalStateException("Always fails");
                         },
-                        (e, context) -> {}
+                        this::recordLoggerInvocation
+                ));
+
+        textWorld.setLastException(throwable);
+    }
+
+    /**
+     * Executes an operation that always fails and interrupts its own thread on the second invocation, so the interrupt
+     * status is already set when the post-failure sleep begins - retries must abort immediately instead of
+     * busy-retrying with zero delay.
+     */
+    @When("execute operation that fails and interrupts the thread on the second invocation")
+    public void executeOperationInterruptingOnSecondInvocation() {
+        var config = createRetryConfig();
+
+        var throwable = catchThrowable(() ->
+                RetryUtils.getWithRetry(config,
+                        (RetryUtils.Context context) -> {
+                            if (attemptCount.incrementAndGet() == 2) {
+                                // set BEFORE the next sleep, which must then abort immediately
+                                Thread.currentThread().interrupt();
+                            }
+
+                            throw new IllegalStateException("Always fails");
+                        },
+                        this::recordLoggerInvocation
                 ));
 
         textWorld.setLastException(throwable);
@@ -83,7 +109,7 @@ public class RetryUtilsSteps {
                             attemptCount.incrementAndGet();
                             return "Success";
                         },
-                        (e, context) -> {}
+                        this::recordLoggerInvocation
                 ));
 
         textWorld.setLastException(throwable);
@@ -113,6 +139,47 @@ public class RetryUtilsSteps {
         assertThat(attemptCount.get())
                 .as("Total retry attempts")
                 .isEqualTo(expectedAttempts);
+    }
+
+    @Then("the exception logger should have been invoked {int} times")
+    public void verifyLoggerInvocationCount(int expectedInvocations) {
+        assertThat(loggerInvocationCount)
+                .as("Exception logger invocations")
+                .isEqualTo(expectedInvocations);
+    }
+
+    @Then("the last logger invocation should report {int} retries made")
+    public void verifyLastLoggerRetriesMade(int expectedRetriesMade) {
+        assertThat(lastLoggerRetriesMade)
+                .as("Retries made reported to the exception logger on the last invocation")
+                .isEqualTo(expectedRetriesMade);
+    }
+
+    @Then("the retry should be aborted by interruption")
+    public void verifyRetryAbortedByInterruption() {
+        assertThat(textWorld.getLastException())
+                .as("last exception")
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Retry interrupted, aborting");
+    }
+
+    @Then("the interrupt flag should be set")
+    public void verifyInterruptFlag() {
+        // Thread.interrupted() checks AND clears the flag, leaving the thread clean for the next scenario
+        assertThat(Thread.interrupted())
+                .as("Interrupt flag after aborted retry")
+                .isTrue();
+    }
+
+    /**
+     * Records an exception logger invocation and the retry counter value the logger observed.
+     *
+     * @param e       exception from the failed attempt
+     * @param context retry context adjusted for the next attempt
+     */
+    private void recordLoggerInvocation(Exception e, RetryUtils.Context context) {
+        loggerInvocationCount++;
+        lastLoggerRetriesMade = context.getRetriesMade();
     }
 
     private RetryConfig createRetryConfig() {

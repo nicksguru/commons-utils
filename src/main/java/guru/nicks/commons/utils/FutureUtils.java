@@ -7,8 +7,8 @@ import org.slf4j.MDC;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -35,19 +35,24 @@ public class FutureUtils {
     /**
      * Same as {@link #getInParallel(Collection, int)}, just the batch size equals the number of tasks.
      *
-     * @param tasks tasks to run
+     * @param tasks tasks to run, can be {@code null} or empty, in which case an empty list is returned
      * @return results of completed futures - in the same order as in the input collection
      */
     public static <T> List<T> getInParallel(Collection<Supplier<T>> tasks) {
-        return FutureUtils.getInParallel(tasks, tasks.size());
+        // null/empty collection is handled gracefully by the 2-arg overload, hence the safe zero limit
+        return FutureUtils.getInParallel(tasks, CollectionUtils.isEmpty(tasks) ? 0 : tasks.size());
     }
 
     /**
      * Creates {@link CompletableFuture} for each {@link Supplier}, runs them in parallel (no more than
      * {@code maxConcurrentTasks} at a time), and awaits their completion. The point is to limit not the number of
      * threads (virtual threads scale up to millions easily), but the number of memory- and/or IO-heavy workers.
+     * <p>
+     * Results correspond 1:1 to the input collection: a {@code null} task is not silently dropped (which would shift
+     * result indices) but becomes a failed future, so it fails fast with {@link CompletionException} wrapping
+     * {@link IllegalArgumentException}.
      *
-     * @param tasks              tasks to run
+     * @param tasks              tasks to run, can be {@code null} or empty, in which case an empty list is returned
      * @param maxConcurrentTasks max. number of concurrent (parallel) tasks
      * @param <T>                future result type
      * @return results of completed futures - in the same order as in the input collection
@@ -70,8 +75,14 @@ public class FutureUtils {
         var i = new AtomicInteger();
 
         List<CompletableFuture<T>> futures = tasks.stream()
-                .filter(Objects::nonNull)
                 .map(task -> {
+                    // keep 1:1 index correspondence with the input: a null task becomes a failed future that
+                    // surfaces via join(), instead of being silently dropped
+                    if (task == null) {
+                        return CompletableFuture.<T>failedFuture(
+                                new IllegalArgumentException("Null task in the input collection"));
+                    }
+
                     // acquire permit BEFORE creating the future
                     try {
                         semaphore.acquire();

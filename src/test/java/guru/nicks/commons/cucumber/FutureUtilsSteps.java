@@ -48,6 +48,22 @@ public class FutureUtilsSteps {
                 .toList();
     }
 
+    /**
+     * Prepares suppliers returning their index, with the middle one replaced by {@code null} - a caller's programming
+     * error that must surface loudly instead of silently shifting result indices.
+     *
+     * @param count number of suppliers (the middle one becomes {@code null})
+     */
+    @Given("{int} suppliers where the middle one is null")
+    public void suppliersWhereTheMiddleOneIsNull(int count) {
+        // mutable list - the middle element is nulled out below
+        suppliers = new ArrayList<>(IntStream.range(0, count)
+                .mapToObj(i -> (Supplier<Integer>) () -> i)
+                .toList());
+
+        suppliers.set(count / 2, null);
+    }
+
     @Given("{int} runnables that store their execution order")
     public void runnablesThatStoreExecutionOrder(int count) {
         executionOrder.clear();
@@ -127,6 +143,18 @@ public class FutureUtilsSteps {
         textWorld.setLastException(thrown);
     }
 
+    /**
+     * Executes a {@code null} supplier collection - both overloads must handle it gracefully (empty result, no
+     * exception), keeping their null contracts aligned.
+     */
+    @When("a null supplier collection is executed in parallel")
+    public void nullSupplierCollectionIsExecutedInParallel() {
+        Throwable thrown = catchThrowable(() ->
+                results = FutureUtils.getInParallel(null));
+
+        textWorld.setLastException(thrown);
+    }
+
     @When("the runnable is executed in parallel")
     public void runnableIsExecutedInParallel() {
         Throwable thrown = catchThrowable(() ->
@@ -166,6 +194,13 @@ public class FutureUtilsSteps {
         assertThat(mdcCheckPassed.get())
                 .as("mdcCheckPassed")
                 .isTrue();
+    }
+
+    @Then("an empty result list should be returned")
+    public void emptyResultListShouldBeReturned() {
+        assertThat(results)
+                .as("results")
+                .isEmpty();
     }
 
     @Then("the runnable should have access to the MDC context")

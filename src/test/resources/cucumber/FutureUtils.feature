@@ -48,3 +48,15 @@ Feature: Parallel execution of tasks using FutureUtils
     When the runnable is executed in parallel
     Then the runnable should have access to the MDC context
     And no exception should be thrown
+
+  Scenario: Null task in the collection fails fast instead of being dropped
+    Given 3 suppliers where the middle one is null
+    When the suppliers are executed in parallel with 2 threads
+    Then an exception should be thrown
+    And the exception should be of type "CompletionException"
+    And the exception message should contain "Null task in the input collection"
+
+  Scenario: Null task collection returns an empty list
+    When a null supplier collection is executed in parallel
+    Then no exception should be thrown
+    And an empty result list should be returned

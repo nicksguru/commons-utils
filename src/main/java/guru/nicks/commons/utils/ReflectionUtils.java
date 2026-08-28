@@ -64,14 +64,16 @@ public class ReflectionUtils {
             .build();
 
     /**
-     * Needed mostly during application startup, therefore expires after 24 hours.
+     * Needed mostly during application startup, therefore expires after 24 hours. Values are {@link Optional} so that
+     * misses (the immutable, shareable {@link Optional#empty()} sentinel) are cached too.
      *
      * @see #findMaterializedGenericType(Class, Class, Class)
      */
-    private static final Cache<String, Class<?>> MATERIALIZED_GENERIC_TYPE_CACHE = Caffeine.newBuilder()
-            .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
-            .expireAfterAccess(Duration.ofHours(24))
-            .build();
+    private static final Cache<MaterializedGenericTypeKey, Optional<Class<?>>> MATERIALIZED_GENERIC_TYPE_CACHE =
+            Caffeine.newBuilder()
+                    .maximumSize(CacheConstants.DEFAULT_CAFFEINE_CACHE_CAPACITY)
+                    .expireAfterAccess(Duration.ofHours(24))
+                    .build();
 
     /**
      * Needed mostly during application startup, therefore expires after 24 hours.
@@ -170,8 +172,7 @@ public class ReflectionUtils {
      * @param genericType   Generic type's class (in the above example, it's {@code T}). Its subclasses will match too,
      *                      for example passing {@link Object} simply finds the first generic type - because any class
      *                      inherits from it
-     * @return optional {@code what} or its subclass; method declares {@code Class<?>} and not {@code Class<? extends T}
-     *         because of caching issues
+     * @return optional {@code what} or its subclass
      */
     @SuppressWarnings("unchecked")
     public static <T> Optional<Class<? extends T>> findMaterializedGenericType(Class<?> where,
@@ -180,28 +181,14 @@ public class ReflectionUtils {
         checkNotNull(genericParent, "genericParent");
         checkNotNull(genericType, "genericType");
 
-        String whereClassName = where.getName();
-        String genericParentClassName = genericParent.getName();
-        String genericTypeClassName = genericType.getName();
-
-        String cacheKey = new StringBuilder(whereClassName.length() + genericParentClassName.length()
-                + genericTypeClassName.length()
-                // separators
-                + 2)
-                .append(whereClassName)
-                .append("/")
-                //
-                .append(genericParentClassName)
-                .append("/")
-                //
-                .append(genericTypeClassName)
-                .toString();
-
-        Class<?> resolvedClass = MATERIALIZED_GENERIC_TYPE_CACHE.get(cacheKey, key ->
-                WithoutCache.getMaterializedGenericTypeWithoutCache(where, genericParent, genericType).orElse(null));
+        // Optional.empty() is an immutable sentinel, so misses are cached too and the expensive hierarchy rescan
+        // runs only once per key
+        Optional<Class<?>> resolvedClass = MATERIALIZED_GENERIC_TYPE_CACHE.get(
+                new MaterializedGenericTypeKey(where, genericParent, genericType),
+                WithoutCache::getMaterializedGenericTypeWithoutCache);
 
         // cache erases the exact value type, but it's T for sure - see cache population logic
-        return Optional.ofNullable((Class<? extends T>) resolvedClass);
+        return resolvedClass.map(cls -> (Class<? extends T>) cls);
     }
 
     /**
@@ -301,6 +288,17 @@ public class ReflectionUtils {
             Class<? extends Annotation> annotation) {
     }
 
+    /**
+     * Cache key for {@link #MATERIALIZED_GENERIC_TYPE_CACHE}. Strong keys are intentional: Caffeine weak keys switch to
+     * identity comparison, which would break record value equality.
+     */
+    private record MaterializedGenericTypeKey(
+
+            Class<?> where,
+            Class<?> genericParent,
+            Class<?> genericType) {
+    }
+
     private static class WithoutCache {
 
         /**
@@ -371,11 +369,11 @@ public class ReflectionUtils {
         }
 
         /**
-         * Called on cache miss from {@link #findMaterializedGenericType(Class, Class, Class)}.
+         * Called on cache miss from {@link #findMaterializedGenericType(Class, Class, Class)}. The exact
+         * {@code ? extends T} value type is restored by the caller because the cache stores the raw type only.
          */
-        private static <T> Optional<Class<? extends T>> getMaterializedGenericTypeWithoutCache(Class<?> where,
-                Class<?> genericParent, Class<T> genericType) {
-            Set<Class<?>> allClasses = getClassHierarchy(where);
+        private static Optional<Class<?>> getMaterializedGenericTypeWithoutCache(MaterializedGenericTypeKey key) {
+            Set<Class<?>> allClasses = getClassHierarchy(key.where());
 
             // for 'where' and each parent class/interface, collect their generic parents: 'A implements B<C>' -> B
             Set<ParameterizedType> allGenericParents = allClasses.stream()
@@ -386,15 +384,15 @@ public class ReflectionUtils {
                     .collect(Collectors.toCollection(LinkedHashSet::new));
 
             Optional<ParameterizedType> match = allGenericParents.stream()
-                    //.peek(type -> log.debug("Checking generic interface/superclass of [{}]: {}", where, type))
+                    //.peek(type -> log.debug("Checking generic interface/superclass of [{}]: {}", key.where(), type))
                     // in SomeInterface<X, Y>, getRawType() returns SomeInterface
                     .filter(type -> type.getRawType() instanceof Class)
-                    .filter(type -> genericParent.isAssignableFrom((Class<?>) type.getRawType()))
-                    //.peek(type -> log.debug("{} is a subclass/subinterface of one of {}", where, genericParent))
+                    .filter(type -> key.genericParent().isAssignableFrom((Class<?>) type.getRawType()))
+                    //.peek(type -> log.debug("{} is a subclass/subinterface of {}", key.where(), key.genericParent()))
                     .findFirst();
 
             // grab [X, Y] from SomeInterface<X, Y> and convert this array to a stream of (X, Y)
-            Class<? extends T> clazz = match.map(ParameterizedType::getActualTypeArguments)
+            Class<?> clazz = match.map(ParameterizedType::getActualTypeArguments)
                     .stream()
                     .flatMap(Arrays::stream)
                     //.peek(type -> log.debug("Checking generic type argument [{}]", type))
@@ -406,10 +404,8 @@ public class ReflectionUtils {
                     // convert Type to its subclass (Class)
                     .filter(Class.class::isInstance)
                     .map(Class.class::cast)
-                    .filter(genericType::isAssignableFrom)
-                    // thanks to isAssignableFrom above, this conversion always succeeds
-                    .map(cls -> (Class<? extends T>) cls)
-                    // asp per the method contract, do NOT sort classes, so passing genericParent=Object always returns
+                    .filter(key.genericType()::isAssignableFrom)
+                    // as per the method contract, do NOT sort classes, so passing genericParent=Object always returns
                     // the FIRST generic parameter
                     .findFirst()
                     .orElse(null);

@@ -27,7 +27,7 @@ public interface NgramUtilsConfig {
      * <p>
      * This procedure is fast and lightweight and therefore is on by default.
      *
-     * @return {@code false} by default
+     * @return {@code true} by default
      */
     default boolean tryEnglishMorphAnalysis() {
         return true;

@@ -61,6 +61,18 @@ public class JwtUtils {
             .build();
 
     /**
+     * Attempts to read authorities from JWT in this order (method references to statics and non-capturing lambdas
+     * are constants, so the list is created once).
+     *
+     * @see #retrieveAuthorities(JwtClaimAccessor, JwtProvider)
+     */
+    private static final List<Function<JwtClaimAccessor, Optional<?>>> AUTHORITY_GUESSERS = List.of(
+            KeycloakUtils::tryParseRoles,
+            jwt -> Optional.ofNullable(CustomJwtClaim.COGNITO_GROUPS.getClaimAsString(jwt)),
+            // fallback for 'no roles found in JWT'
+            jwt -> Optional.empty());
+
+    /**
      * Retrieves and post-processes external user IDs according to {@link JwtProvider#getCustomUserIdPrefix()}.
      *
      * @param jwt JWT
@@ -124,15 +136,8 @@ public class JwtUtils {
             return Collections.emptySet();
         }
 
-        // attempt to read authorities from JWT in this order
-        List<Function<JwtClaimAccessor, Optional<?>>> guessers = List.of(
-                KeycloakUtils::tryParseRoles,
-                jwt1 -> Optional.ofNullable(CustomJwtClaim.COGNITO_GROUPS.getClaimAsString(jwt1)),
-                // fallback for 'no roles found in JWT'
-                jwt1 -> Optional.empty());
-
         // stop as soon as one of the guessers returns a non-empty Optional
-        Object result = guessers.stream()
+        Object result = AUTHORITY_GUESSERS.stream()
                 .map(func -> func.apply(jwt))
                 .filter(Optional::isPresent)
                 .map(Optional::get)

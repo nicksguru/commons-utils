@@ -20,6 +20,7 @@ Feature: PhoneUtils
       | Phone: +44 7911 123456 | true    |                                                                |
       | +61 4 1234 5678        | true    |                                                                |
       | +1-555-123-4567        | false   | no such country code                                           |
+      | +999999999999          | false   | unassigned country code 999                                    |
       | 555-123-4567           | false   |                                                                |
       | abcdefg                | false   |                                                                |
       | +123                   | false   |                                                                |

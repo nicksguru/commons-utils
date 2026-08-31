@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import rita.RiTa;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -398,26 +399,29 @@ public class EnglishUtils {
             return word;
         }
 
-        // normalize before the cache lookup so that case/whitespace variants share a single cache entry
-        String normalizedWord = word.strip().toLowerCase();
+        // normalize before the cache lookup so that case/whitespace variants share a single cache entry;
+        // Locale.ROOT keeps the pipeline independent of the JVM default locale (e.g. Turkish dot-less-i)
+        String normalizedWord = word.strip().toLowerCase(Locale.ROOT);
         // 'get' method may return null as per Caffeine specs, but never does in this particular case
         return LEMMA_CACHE.get(normalizedWord, EnglishUtils::computeWordLemmaWithoutCache);
     }
 
     /**
-     * Cache loader for {@link #getWordLemma(String)}: stems the given (already normalized) word and maps irregular
-     * forms to their base lemmas.
+     * Cache loader for {@link #getWordLemma(String)}: maps irregular forms to their base lemmas, falling back to
+     * stemming. Irregular forms are matched on the raw normalized word BEFORE stemming - looking the stemmed word up
+     * first shadowed 26 map entries whose keys don't survive RiTa stemming unchanged (e.g. 'geese' stems to 'gees',
+     * so the 'geese' → 'goose' entry was never reachable and 'gees' was returned instead of 'goose').
      *
      * @param word normalized word (lowercase, stripped)
      * @return lemma, or the stemmed word if it's not a known irregular form
      */
     private static String computeWordLemmaWithoutCache(String word) {
-        String stem = RiTa.stem(word);
-        String regular = IRREGULARS.get(stem);
+        // raw-word lookup first - the map is keyed by inflected forms, many of which RiTa stemming would mangle
+        String irregular = IRREGULARS.get(word);
 
-        return StringUtils.isNotBlank(regular)
-                ? regular
-                : stem;
+        return StringUtils.isNotBlank(irregular)
+                ? irregular
+                : RiTa.stem(word);
     }
 
     /**
@@ -445,7 +449,8 @@ public class EnglishUtils {
         }
 
         if (!alreadyNormalized) {
-            word = word.strip().toLowerCase();
+            // Locale.ROOT - see getWordLemma
+            word = word.strip().toLowerCase(Locale.ROOT);
         }
 
         return STOP_WORDS.contains(word);

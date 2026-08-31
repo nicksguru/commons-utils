@@ -116,11 +116,11 @@ Feature: EnglishUtils
       | had         | have       | past of have                            |
       | has         | have       | present of have                         |
       | did         | do         | past of do                              |
-      | does        | doe        | present of do (stemmer behavior)        |
+      | does        | do         | present of do                           |
       | done        | do         | participle of do                        |
       | went        | go         | past of go                              |
       | gone        | go         | participle of go                        |
-      | goes        | goe        | 3rd person of go (stemmer behavior)     |
+      | goes        | go         | 3rd person of go                        |
       | ran         | run        | past of run                             |
       | runs        | run        | 3rd person of run                       |
       | ate         | eat        | past of eat                             |
@@ -151,10 +151,10 @@ Feature: EnglishUtils
       | thinks      | think      | 3rd person of think                     |
       | told        | tell       | past of tell                            |
       | tells       | tell       | 3rd person of tell                      |
-      | became      | becam      | past of become (stemmer behavior)       |
-      | becomes     | becom      | 3rd person of become (stemmer behavior) |
+      | became      | become     | past of become                          |
+      | becomes     | become     | 3rd person of become                    |
       | left        | leave      | past of leave                           |
-      | leaves      | leav       | 3rd person of leave (stemmer behavior)  |
+      | leaves      | leave      | 3rd person of leave                     |
       | felt        | feel       | past of feel                            |
       | feels       | feel       | 3rd person of feel                      |
       | brought     | bring      | past of bring                           |
@@ -225,13 +225,13 @@ Feature: EnglishUtils
       | breaks      | break      | 3rd person of break                     |
       | chose       | choose     | past of choose (stemmer behavior)       |
       | chosen      | choose     | participle of choose (stemmer behavior) |
-      | chooses     | choos      | 3rd person of choose (stemmer behavior) |
+      | chooses     | choose     | 3rd person of choose                    |
       | drank       | drink      | past of drink                           |
       | drunk       | drink      | participle of drink                     |
       | drinks      | drink      | 3rd person of drink                     |
       | flew        | fly        | past of fly (stemmer behavior)          |
       | flown       | fly        | participle of fly (stemmer behavior)    |
-      | flies       | fli        | 3rd person of fly (stemmer behavior)    |
+      | flies       | fly        | 3rd person of fly                       |
       | swam        | swim       | past of swim                            |
       | swum        | swim       | participle of swim                      |
       | swims       | swim       | 3rd person of swim                      |
@@ -267,7 +267,7 @@ Feature: EnglishUtils
       | hides       | hide       | 3rd person of hide                      |
       | froze       | freeze     | past of freeze (stemmer behavior)       |
       | frozen      | freeze     | participle of freeze (stemmer behavior) |
-      | freezes     | freez      | 3rd person of freeze (stemmer behavior) |
+      | freezes     | freeze     | 3rd person of freeze                    |
       | rose        | rise       | past of rise                            |
       | risen       | rise       | participle of rise                      |
       | rises       | rise       | 3rd person of rise                      |
@@ -276,7 +276,7 @@ Feature: EnglishUtils
       | wakes       | wake       | 3rd person of wake                      |
       | wove        | weave      | past of weave (stemmer behavior)        |
       | woven       | weave      | participle of weave (stemmer behavior)  |
-      | weaves      | weav       | 3rd person of weave (stemmer behavior)  |
+      | weaves      | weave      | 3rd person of weave                     |
       | tore        | tear       | past of tear                            |
       | torn        | tear       | participle of tear                      |
       | tears       | tear       | 3rd person of tear                      |
@@ -367,57 +367,57 @@ Feature: EnglishUtils
     When word is lemmatized
     Then output should be "<lemma>"
     Examples:
-      | input       | lemma      | comments                            |
-      | men         | man        | irregular plural                    |
-      | women       | woman      | irregular plural                    |
-      | children    | child      | irregular plural                    |
-      | oxen        | ox         | irregular plural                    |
-      | feet        | foot       | irregular plural                    |
-      | geese       | gees       | irregular plural (stemmer behavior) |
-      | teeth       | tooth      | irregular plural                    |
-      | mice        | mouse      | irregular plural                    |
-      | lice        | louse      | irregular plural                    |
-      | brethren    | brother    | irregular plural                    |
-      | analyses    | analys     | Greek plural (stemmer behavior)     |
-      | bases       | base       | Greek plural                        |
-      | crises      | crise      | Greek plural (stemmer behavior)     |
-      | diagnoses   | diagnos    | Greek plural (stemmer behavior)     |
-      | hypotheses  | hypothes   | Greek plural (stemmer behavior)     |
-      | oases       | oas        | Greek plural (stemmer behavior)     |
-      | parentheses | parenthes  | Greek plural (stemmer behavior)     |
-      | theses      | these      | Greek plural (stemmer behavior)     |
-      | axes        | axe        | Greek plural (stemmer behavior)     |
-      | phenomena   | phenomenon | Greek plural                        |
-      | criteria    | criterion  | Greek plural                        |
-      | data        | datum      | Latin plural                        |
-      | media       | medium     | Latin plural                        |
-      | bacteria    | bacterium  | Latin plural                        |
-      | curricula   | curriculum | Latin plural                        |
-      | memoranda   | memorandum | Latin plural                        |
-      | strata      | stratum    | Latin plural                        |
-      | alumni      | alumnus    | Latin plural                        |
-      | cacti       | cactus     | Latin plural                        |
-      | foci        | focus      | Latin plural                        |
-      | fungi       | fungus     | Latin plural                        |
-      | nuclei      | nucleus    | Latin plural                        |
-      | radii       | radius     | Latin plural                        |
-      | stimuli     | stimulus   | Latin plural                        |
-      | syllabi     | syllabus   | Latin plural                        |
-      | appendices  | appendic   | Latin plural (stemmer behavior)     |
-      | indices     | indic      | Latin plural (stemmer behavior)     |
-      | matrices    | matric     | Latin plural (stemmer behavior)     |
-      | vertices    | vertic     | Latin plural (stemmer behavior)     |
-      | bureaux     | bureau     | French plural                       |
-      | plateaux    | plateau    | French plural                       |
-      | tableaux    | tableau    | French plural                       |
-      | sheep       | sheep      | zero plural                         |
-      | deer        | deer       | zero plural                         |
-      | fish        | fish       | zero plural                         |
-      | species     | speci      | zero plural (stemmer behavior)      |
-      | series      | seri       | zero plural (stemmer behavior)      |
-      | aircraft    | aircraft   | zero plural                         |
-      | moose       | moos       | zero plural (stemmer behavior)      |
-      | swine       | swine      | zero plural                         |
+      | input       | lemma       | comments           |
+      | men         | man         | irregular plural   |
+      | women       | woman       | irregular plural   |
+      | children    | child       | irregular plural   |
+      | oxen        | ox          | irregular plural   |
+      | feet        | foot        | irregular plural   |
+      | geese       | goose       | irregular plural   |
+      | teeth       | tooth       | irregular plural   |
+      | mice        | mouse       | irregular plural   |
+      | lice        | louse       | irregular plural   |
+      | brethren    | brother     | irregular plural   |
+      | analyses    | analysis    | Greek plural       |
+      | bases       | base        | Greek plural       |
+      | crises      | crisis      | Greek plural       |
+      | diagnoses   | diagnosis   | Greek plural       |
+      | hypotheses  | hypothesis  | Greek plural       |
+      | oases       | oasis       | Greek plural       |
+      | parentheses | parenthesis | Greek plural       |
+      | theses      | thesis      | Greek plural       |
+      | axes        | axis        | Greek plural       |
+      | phenomena   | phenomenon  | Greek plural       |
+      | criteria    | criterion   | Greek plural       |
+      | data        | datum       | Latin plural       |
+      | media       | medium      | Latin plural       |
+      | bacteria    | bacterium   | Latin plural       |
+      | curricula   | curriculum  | Latin plural       |
+      | memoranda   | memorandum  | Latin plural       |
+      | strata      | stratum     | Latin plural       |
+      | alumni      | alumnus     | Latin plural       |
+      | cacti       | cactus      | Latin plural       |
+      | foci        | focus       | Latin plural       |
+      | fungi       | fungus      | Latin plural       |
+      | nuclei      | nucleus     | Latin plural       |
+      | radii       | radius      | Latin plural       |
+      | stimuli     | stimulus    | Latin plural       |
+      | syllabi     | syllabus    | Latin plural       |
+      | appendices  | appendix    | Latin plural       |
+      | indices     | index       | Latin plural       |
+      | matrices    | matrix      | Latin plural       |
+      | vertices    | vertex      | Latin plural       |
+      | bureaux     | bureau      | French plural      |
+      | plateaux    | plateau     | French plural      |
+      | tableaux    | tableau     | French plural      |
+      | sheep       | sheep       | zero plural        |
+      | deer        | deer        | zero plural        |
+      | fish        | fish        | zero plural        |
+      | species     | species     | zero plural        |
+      | series      | series      | zero plural        |
+      | aircraft    | aircraft    | zero plural        |
+      | moose       | moose       | zero plural        |
+      | swine       | swine       | zero plural        |
 
   Scenario Outline: Lemmatize irregular adjectives (comparative/superlative to base)
     Given input is "<input>"
@@ -427,7 +427,7 @@ Feature: EnglishUtils
       | input    | lemma  | comments                                 |
       | better   | good   | comparative of good                      |
       | best     | good   | superlative of good                      |
-      | worse    | wors   | comparative of bad (stemmer behavior)    |
+      | worse    | bad    | comparative of bad                       |
       | worst    | bad    | superlative of bad (found in IRREGULARS) |
       | less     | little | comparative of little                    |
       | least    | little | superlative of little                    |
@@ -449,7 +449,7 @@ Feature: EnglishUtils
       | dogs     | dog      | regular plural                           |
       | boxes    | box      | regular plural                           |
       | watches  | watch    | regular plural                           |
-      | flies    | fli      | regular plural (stemmer behavior)        |
+      | flies    | fly      | intercepted by IRREGULARS (verb 'fly')   |
       | running  | run      | present participle                       |
       | walked   | walk     | past tense                               |
       | jumping  | jump     | present participle                       |

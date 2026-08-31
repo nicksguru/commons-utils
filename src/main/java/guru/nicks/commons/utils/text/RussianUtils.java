@@ -9,6 +9,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Russian morphology utility methods for lemmatization using the AOT library.
@@ -57,7 +58,8 @@ public class RussianUtils {
         }
 
         try {
-            word = word.strip().toLowerCase();
+            // Locale.ROOT - lemmatization must not depend on the JVM default locale
+            word = word.strip().toLowerCase(Locale.ROOT);
             List<WordformMeaning> meanings = findWordMeanings(word);
 
             if (meanings.isEmpty()) {
@@ -90,7 +92,7 @@ public class RussianUtils {
             return List.of();
         }
 
-        word = word.strip().toLowerCase();
+        word = word.strip().toLowerCase(Locale.ROOT);
 
         try {
             return (List<WordformMeaning>) lookupForMeaningsMethod.invoke(word);

@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -56,7 +57,7 @@ public class TextUtils {
      * for ASCII only.
      */
     private static final Pattern SPLIT_BY_COMMA_PATTERN = Pattern.compile(
-            "[" + ANY_WHITESPACE + "]*,[" + ANY_WHITESPACE + "]*");
+            "[" + ANY_WHITESPACE + "]*+,[" + ANY_WHITESPACE + "]*+");
     private static final Pattern SPLIT_BY_WHITESPACES_PATTERN = Pattern.compile(
             "[" + ANY_WHITESPACE + "]+");
 
@@ -134,7 +135,9 @@ public class TextUtils {
             str = reduceAccents(str);
         }
 
-        return new TreeSet<>(splitIntoWords(str.toLowerCase()));
+        // Locale.ROOT - word tokenization must not depend on the JVM default locale
+        // (Turkish dotless-i would mangle it)
+        return new TreeSet<>(splitIntoWords(str.toLowerCase(Locale.ROOT)));
     }
 
     /**

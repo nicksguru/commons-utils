@@ -45,3 +45,27 @@ Feature: NgramUtils (with accented characters reduced to their ASCII equivalents
       | ТЕсты   | тес   | тест  | тесты |        |       |        |                                          |
       | словАми | сло   | слов  | слова | словам | слово |        | different vowel in item5 (lemma)         |
       | Ёлка    | елк   | елка  |       |        |       |        | ё -> е                                   |
+
+  Scenario Outline: Create ngrams from pre-tokenized unique words - equivalent to the String version
+    Given input is "<input>"
+    When ngrams are created from unique words in <mode> mode
+    Then output should equal ngrams created from the input string
+    And output should be "<item1>", "<item2>", "<item3>", "<item4>", "<item5>"
+    Examples:
+      | input | mode   | item1 | item2 | item3 | item4 | item5 | comments                                |
+      | tests | PREFIX | tes   | test  | tests |       |       |                                         |
+      | tests | INFIX  | est   | sts   |       |       |       |                                         |
+      | tests | ALL    | tes   | test  | tests | est   | sts   | prefix ngrams go first                  |
+      | TêST  | ALL    | tes   | test  | est   |       |       | both prefix and infix ngrams are sorted |
+      | KEPT  | PREFIX | kep   | kept  | kee   | keep  |       | the lemma is 'keep'                     |
+      | ran   | PREFIX | ran   | run   |       |       |       | irregular verb                          |
+      | it was| PREFIX |       |       |       |       |       | stop words - no grams                   |
+
+  Scenario Outline: Create ngrams from an empty words collection
+    When ngrams are created from an empty words collection in <mode> mode
+    Then output should be empty
+    Examples:
+      | mode   |
+      | PREFIX |
+      | INFIX  |
+      | ALL    |

@@ -14,8 +14,14 @@ public class EnglishUtilsSteps {
 
     @When("stop word check is performed")
     public void stopWordCheckIsPerformed() {
-        Boolean result = EnglishUtils.stopWord(textWorld.getInput());
-        textWorld.setOutput(result.toString());
+        boolean result = EnglishUtils.stopWord(textWorld.getInput());
+        textWorld.setOutput(Boolean.valueOf(result).toString());
+    }
+
+    @When("stop word check is performed with already normalized flag set to {booleanValue}")
+    public void stopWordCheckIsPerformedWithAlreadyNormalizedFlag(Boolean alreadyNormalized) {
+        boolean result = EnglishUtils.stopWord(textWorld.getInput(), alreadyNormalized);
+        textWorld.setOutput(Boolean.valueOf(result).toString());
     }
 
     @When("word is lemmatized")

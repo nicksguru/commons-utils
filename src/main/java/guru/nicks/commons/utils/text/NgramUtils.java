@@ -2,6 +2,7 @@ package guru.nicks.commons.utils.text;
 
 import lombok.experimental.UtilityClass;
 
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.SequencedSet;
 import java.util.Set;
@@ -31,7 +32,8 @@ public class NgramUtils {
     public static final int ASSUMED_NGRAMS_PER_WORD = 7;
 
     /**
-     * Creates ngrams for unique words.
+     * Creates ngrams for unique words extracted from the input string. The string is tokenized exactly once, see
+     * {@link #createNgrams(Set, Mode, NgramUtilsConfig)} for the ngram generation itself.
      * <p>
      * WARNING: original words are part of their ngrams only if their length is within the ngram length limits. As such,
      * the word 'ox' is too short for trigrams.
@@ -43,10 +45,32 @@ public class NgramUtils {
      *         overflow, prefix ngrams go first - they have precedence before collection truncation)
      */
     public static SequencedSet<String> createNgrams(String str, Mode mode, NgramUtilsConfig config) {
+        // tokenize once - both ngram phases below reuse the same word set
+        Set<String> uniqueWords = TextUtils.collectUniqueWords(str, config.isReduceAccents());
+        return createNgrams(uniqueWords, mode, config);
+    }
+
+    /**
+     * Creates ngrams for pre-tokenized unique words, sparing the caller the cost of re-tokenizing the same text. Words
+     * are processed in the iteration order of the given collection, so passing the sorted set from
+     * {@link TextUtils#collectUniqueWords(String, boolean)} yields output identical to
+     * {@link #createNgrams(String, Mode, NgramUtilsConfig)}.
+     * <p>
+     * WARNING: original words are part of their ngrams only if their length is within the ngram length limits. As such,
+     * the word 'ox' is too short for trigrams.
+     *
+     * @param uniqueWords unique words to create ngrams for, <b>already lowercased (and with accents reduced, if</b>
+     *                    {@link NgramUtilsConfig#isReduceAccents()} is on)
+     * @param mode        mode of ngrams creation
+     * @param config      configuration
+     * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} elements to avoid memory
+     *         overflow, prefix ngrams go first - they have precedence before collection truncation)
+     */
+    public static SequencedSet<String> createNgrams(Set<String> uniqueWords, Mode mode, NgramUtilsConfig config) {
         SequencedSet<String> ngrams = switch (mode) {
             case ALL -> {
-                SequencedSet<String> prefixNgrams = createPrefixNgrams(str, config);
-                SequencedSet<String> infixNgrams = createInfixNgrams(str, config);
+                SequencedSet<String> prefixNgrams = createPrefixNgrams(uniqueWords, config);
+                SequencedSet<String> infixNgrams = createInfixNgrams(uniqueWords, config);
 
                 // temporarily, this set may hold two times the max. ngram count
                 if (prefixNgrams.size() < config.getMaxNgramCount()) {
@@ -56,8 +80,8 @@ public class NgramUtils {
                 yield prefixNgrams;
             }
 
-            case PREFIX -> createPrefixNgrams(str, config);
-            case INFIX -> createInfixNgrams(str, config);
+            case PREFIX -> createPrefixNgrams(uniqueWords, config);
+            case INFIX -> createInfixNgrams(uniqueWords, config);
         };
 
         @SuppressWarnings("java:S1488") // redundant local variable, for debugging
@@ -71,12 +95,12 @@ public class NgramUtils {
      * <p>
      * WARNING: original words are part of the result only if the word length is within the ngram length limits.
      *
-     * @param str    input string
+     * @param words  unique words to process
      * @param config configuration
      * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
-    private static SequencedSet<String> createPrefixNgrams(String str, NgramUtilsConfig config) {
-        return generateNgrams(str, config, 0, 0);
+    private static SequencedSet<String> createPrefixNgrams(Collection<String> words, NgramUtilsConfig config) {
+        return generateNgrams(words, config, 0, 0);
     }
 
     /**
@@ -85,12 +109,12 @@ public class NgramUtils {
      * <p>
      * WARNING: original words are part of the result only if the word length is within the ngram length limits.
      *
-     * @param str    input string
+     * @param words  unique words to process
      * @param config configuration
      * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
-    private static SequencedSet<String> createInfixNgrams(String str, NgramUtilsConfig config) {
-        return generateNgrams(str, config, 1, Integer.MAX_VALUE);
+    private static SequencedSet<String> createInfixNgrams(Collection<String> words, NgramUtilsConfig config) {
+        return generateNgrams(words, config, 1, Integer.MAX_VALUE);
     }
 
     /**
@@ -99,17 +123,15 @@ public class NgramUtils {
      * WARNING: original words are part of the result only if the word length is within the ngram length limits and
      * {@code startEachWordOffset} is 0.
      *
-     * @param str                 input string
+     * @param words               unique words to process
      * @param config              configuration
      * @param startEachWordOffset offset in each word to start at
      * @param endEachWordOffset   offset in each word to finish at (word lengths differ, so pass
      *                            {@link Integer#MAX_VALUE} to process each word fully)
      * @return ngrams (modifiable collection, max. {@link NgramUtilsConfig#getMaxNgramCount()} items)
      */
-    private static SequencedSet<String> generateNgrams(String str, NgramUtilsConfig config,
+    private static SequencedSet<String> generateNgrams(Collection<String> words, NgramUtilsConfig config,
             int startEachWordOffset, int endEachWordOffset) {
-        // avoid processing the same word twice
-        Set<String> words = TextUtils.collectUniqueWords(str, config.isReduceAccents());
         SequencedSet<String> ngrams = LinkedHashSet.newLinkedHashSet(words.size() * ASSUMED_NGRAMS_PER_WORD);
 
         // 0 means prefix ngrams are to be generated
@@ -125,12 +147,13 @@ public class NgramUtils {
     }
 
     /**
-     * Called from {@link #generateNgrams(String, NgramUtilsConfig, int, int)}. See description of arguments there.
+     * Called from {@link #generateNgrams(Collection, NgramUtilsConfig, int, int)}. See description of arguments there.
      */
     private static void addWordNgrams(NgramUtilsConfig config, int startEachWordOffset, int endEachWordOffset,
             String word, int maxNgramLength, Set<String> whereToAdd) {
-        // special case: English stop words don't make their way into ANY ngrams
-        if (config.tryEnglishMorphAnalysis() && EnglishUtils.stopWord(word)) {
+        // special case: English stop words don't make their way into ANY ngrams; fast path - words are already
+        // lowercase and trimmed per the createNgrams(Collection, ...) contract
+        if (config.tryEnglishMorphAnalysis() && EnglishUtils.stopWord(word, true)) {
             return;
         }
 

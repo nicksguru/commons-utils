@@ -67,6 +67,39 @@ Feature: EnglishUtils
       | happy   | false  | adjective             |
       | quickly | false  | adverb                |
 
+  Scenario Outline: Check if a word is a stop word via the alreadyNormalized overload
+    Given input is "<input>"
+    When stop word check is performed with already normalized flag set to <alreadyNormalized>
+    Then output should be "<result>"
+    Examples:
+      | input | alreadyNormalized | result | comments                                |
+      | the   | true              | true   | normalized word - same as the 1-arg one |
+      | was   | true              | true   | normalized word - same as the 1-arg one |
+      | cat   | true              | false  | normalized word - same as the 1-arg one |
+      | ox    | true              | false  | normalized word - same as the 1-arg one |
+      | The   | false             | true   | false flag matches the 1-arg method     |
+      | THE   | false             | true   | false flag matches the 1-arg method     |
+      | Cat   | false             | false  | false flag matches the 1-arg method     |
+      | cat   | false             | false  | false flag matches the 1-arg method     |
+
+  Scenario: Fast path with a mixed-case stop word differs from the 1-arg method
+    Given input is "The"
+    When stop word check is performed
+    Then output should be "true"
+
+    Given input is "The"
+    When stop word check is performed with already normalized flag set to true
+    Then output should be "false"
+
+  Scenario: Fast path with an untrimmed stop word differs from the 1-arg method
+    Given input is " the "
+    When stop word check is performed
+    Then output should be "true"
+
+    Given input is " the "
+    When stop word check is performed with already normalized flag set to true
+    Then output should be "false"
+
   Scenario Outline: Lemmatize irregular verbs (past tense to infinitive)
     Given input is "<input>"
     When word is lemmatized

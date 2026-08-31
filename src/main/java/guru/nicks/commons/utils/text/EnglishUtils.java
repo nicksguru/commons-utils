@@ -427,11 +427,27 @@ public class EnglishUtils {
      * @return {@code true} if the word is a stop word
      */
     public static boolean stopWord(String word) {
+        return stopWord(word, false);
+    }
+
+    /**
+     * Checks for common stop words, such as 'the', 'a', 'it', with a fast path for pre-normalized words.
+     *
+     * @param word             word to check
+     * @param alreadyNormalized if {@code true}, the word is used verbatim, skipping {@code strip().toLowerCase()};
+     *                         pass it only for words that are already lowercase and trimmed, such as those produced
+     *                         by {@link TextUtils#collectUniqueWords(String, boolean)}
+     * @return {@code true} if the word is a stop word
+     */
+    public static boolean stopWord(String word, boolean alreadyNormalized) {
         if (StringUtils.isBlank(word)) {
             return false;
         }
 
-        word = word.strip().toLowerCase();
+        if (!alreadyNormalized) {
+            word = word.strip().toLowerCase();
+        }
+
         return STOP_WORDS.contains(word);
     }
 

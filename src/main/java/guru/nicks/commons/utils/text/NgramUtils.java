@@ -67,14 +67,17 @@ public class NgramUtils {
      *         overflow, prefix ngrams go first - they have precedence before collection truncation)
      */
     public static SequencedSet<String> createNgrams(Set<String> uniqueWords, Mode mode, NgramUtilsConfig config) {
+        // hoisted once per call - the early-exit checks inside generation compare the set size against it
+        int maxNgramCount = config.getMaxNgramCount();
+
         SequencedSet<String> ngrams = switch (mode) {
             case ALL -> {
                 SequencedSet<String> prefixNgrams = createPrefixNgrams(uniqueWords, config);
-                SequencedSet<String> infixNgrams = createInfixNgrams(uniqueWords, config);
 
-                // temporarily, this set may hold two times the max. ngram count
-                if (prefixNgrams.size() < config.getMaxNgramCount()) {
-                    prefixNgrams.addAll(infixNgrams);
+                // prefix phase saturated the cap - infix ngrams would be discarded entirely, so skip generating
+                // them; otherwise infix ngrams fill the remaining slots, stopping early once the cap is reached
+                if (prefixNgrams.size() < maxNgramCount) {
+                    addNgrams(prefixNgrams, uniqueWords, config, 1, Integer.MAX_VALUE);
                 }
 
                 yield prefixNgrams;
@@ -133,6 +136,25 @@ public class NgramUtils {
     private static SequencedSet<String> generateNgrams(Collection<String> words, NgramUtilsConfig config,
             int startEachWordOffset, int endEachWordOffset) {
         SequencedSet<String> ngrams = LinkedHashSet.newLinkedHashSet(words.size() * ASSUMED_NGRAMS_PER_WORD);
+        addNgrams(ngrams, words, config, startEachWordOffset, endEachWordOffset);
+        // safety net - with the early exit inside addNgrams the set never exceeds the cap, so no copy happens
+        return limitNgramCount(ngrams, config);
+    }
+
+    /**
+     * Called from {@link #generateNgrams(Collection, NgramUtilsConfig, int, int)} and from
+     * {@link #createNgrams(Set, Mode, NgramUtilsConfig)} (to fill the remaining slots of an already populated set). See
+     * description of arguments there.
+     * <p>
+     * Generation stops early once the set holds {@link NgramUtilsConfig#getMaxNgramCount()} distinct ngrams -
+     * everything generated beyond the cap would be truncated afterward anyway, so producing it is pure waste.
+     *
+     * @param ngrams set to add the ngrams to, its current content counts towards the cap
+     */
+    private static void addNgrams(Set<String> ngrams, Collection<String> words, NgramUtilsConfig config,
+            int startEachWordOffset, int endEachWordOffset) {
+        // hoisted once per phase - the early-exit checks below compare the set size against it
+        int maxNgramCount = config.getMaxNgramCount();
 
         // 0 means prefix ngrams are to be generated
         int maxNgramLength = (startEachWordOffset == 0)
@@ -140,17 +162,20 @@ public class NgramUtils {
                 : config.getMaxInfixNgramLength();
 
         for (String word : words) {
-            addWordNgrams(config, startEachWordOffset, endEachWordOffset, word, maxNgramLength, ngrams);
-        }
+            // early exit - the cap of distinct ngrams is reached, all further ngrams would be truncated anyway
+            if (ngrams.size() >= maxNgramCount) {
+                break;
+            }
 
-        return limitNgramCount(ngrams, config);
+            addWordNgrams(config, startEachWordOffset, endEachWordOffset, word, maxNgramLength, maxNgramCount, ngrams);
+        }
     }
 
     /**
-     * Called from {@link #generateNgrams(Collection, NgramUtilsConfig, int, int)}. See description of arguments there.
+     * Called from {@link #addNgrams(Set, Collection, NgramUtilsConfig, int, int)}. See description of arguments there.
      */
     private static void addWordNgrams(NgramUtilsConfig config, int startEachWordOffset, int endEachWordOffset,
-            String word, int maxNgramLength, Set<String> whereToAdd) {
+            String word, int maxNgramLength, int maxNgramCount, Set<String> whereToAdd) {
         // special case: English stop words don't make their way into ANY ngrams; fast path - words are already
         // lowercase and trimmed per the createNgrams(Collection, ...) contract
         if (config.tryEnglishMorphAnalysis() && EnglishUtils.stopWord(word, true)) {
@@ -158,16 +183,16 @@ public class NgramUtils {
         }
 
         addRawNgrams(word, startEachWordOffset, endEachWordOffset,
-                config.getMinNgramLength(), maxNgramLength, whereToAdd);
+                config.getMinNgramLength(), maxNgramLength, maxNgramCount, whereToAdd);
 
         if (config.tryEnglishMorphAnalysis()) {
             addEnglishMorphNgrams(word, startEachWordOffset, endEachWordOffset,
-                    config.getMinNgramLength(), maxNgramLength, whereToAdd);
+                    config.getMinNgramLength(), maxNgramLength, maxNgramCount, whereToAdd);
         }
 
         if (config.tryRussianMorphAnalysis()) {
             addRussianMorphNgrams(word, startEachWordOffset, endEachWordOffset,
-                    config.getMinNgramLength(), maxNgramLength, whereToAdd);
+                    config.getMinNgramLength(), maxNgramLength, maxNgramCount, whereToAdd);
         }
     }
 
@@ -183,10 +208,11 @@ public class NgramUtils {
      *                       input string is simply processed fully)
      * @param minNgramLength minimum ngram length
      * @param maxNgramLength maximum ngram length (will be normalized to fit in the string length)
+     * @param maxNgramCount  maximum number of distinct ngrams to hold - generation stops early once it is reached
      * @param whereToAdd     where to add the ngrams
      */
     private static void addRawNgrams(String word, int startOffset, int endOffset,
-            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
+            int minNgramLength, int maxNgramLength, int maxNgramCount, Set<String> whereToAdd) {
         // nothing to do if the string is too short
         if (startOffset >= word.length()) {
             return;
@@ -201,6 +227,12 @@ public class NgramUtils {
                     break;
                 }
 
+                // early exit - the cap of distinct ngrams is reached, everything further would be truncated
+                // anyway, so even the substring is not worth allocating
+                if (whereToAdd.size() >= maxNgramCount) {
+                    return;
+                }
+
                 whereToAdd.add(word.substring(i, i + ngramLength));
             }
         }
@@ -208,8 +240,8 @@ public class NgramUtils {
 
     /**
      * Performs morphology analysis for English and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
-     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, Set)}. The common stop words
-     * (such as 'the', be') are NOT filtered out, rather processed ('was' becomes 'be' etc.).
+     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, int, Set)}. The common stop
+     * words (such as 'the', be') are NOT filtered out, rather processed ('was' becomes 'be' etc.).
      * <p>
      * This method is light-weight, requires no dictionary, converts 'ran' to 'run', 'geese' to 'goose' and so on.
      * <p>
@@ -220,29 +252,29 @@ public class NgramUtils {
      * @param word must be non-blank and in lowercase already, for speed reasons
      */
     private static void addEnglishMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
-            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
+            int minNgramLength, int maxNgramLength, int maxNgramCount, Set<String> whereToAdd) {
         String lemma = EnglishUtils.getWordLemma(word);
 
         if (!lemma.equals(word)) {
             addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
-                    minNgramLength, maxNgramLength, whereToAdd);
+                    minNgramLength, maxNgramLength, maxNgramCount, whereToAdd);
         }
     }
 
     /**
      * Performs morphology analysis for Russian and creates ngrams for the 'lemma' (kind of word stem, but smarter). For
-     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, Set)}.
+     * arguments and return value, see {@link #addRawNgrams(String, int, int, int, int, int, Set)}.
      * <p>
      * WARNING: the lemma is only processed (split into ngrams) if its length is within the ngram length and word offset
      * limits. Also, if the lemma is the same as the original word, it is skipped - because 'raw ngrams' do the same.
      */
     private static void addRussianMorphNgrams(String word, int startEachWordOffset, int endEachWordOffset,
-            int minNgramLength, int maxNgramLength, Set<String> whereToAdd) {
+            int minNgramLength, int maxNgramLength, int maxNgramCount, Set<String> whereToAdd) {
         String lemma = RussianUtils.getWordLemma(word);
 
         if (!lemma.equals(word)) {
             addRawNgrams(lemma, startEachWordOffset, endEachWordOffset,
-                    minNgramLength, maxNgramLength, whereToAdd);
+                    minNgramLength, maxNgramLength, maxNgramCount, whereToAdd);
         }
     }
 

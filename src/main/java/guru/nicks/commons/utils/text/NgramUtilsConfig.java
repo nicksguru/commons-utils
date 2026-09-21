@@ -85,4 +85,22 @@ public interface NgramUtilsConfig {
         return 3;
     }
 
+    /**
+     * Builds the full-text search data in the weighted {@code tsvector} input format, so that (in DBs casting the
+     * stored string to {@code tsvector}, such as PostgreSQL) prefix ngrams rank higher than infix ones. Every chunk is
+     * emitted as {@code 'chunk':positionWeight} with weight {@code A} for short words / prefix ngrams and weight
+     * {@code B} for infix ngrams.
+     * <p>
+     * {@code ts_rank}'s default weight array ({@code {0.1, 0.2, 0.4, 1.0}} for {@code D}, {@code C}, {@code B},
+     * {@code A}) makes an A-match worth 2.5 times a B-match, mirroring the high/low-priority split of the Mongo
+     * implementation.
+     * <p>
+     * WARNING: the annotated chunks are roughly twice as long as the plain ones, so length caps hold fewer chunks.
+     *
+     * @return {@code false} by default
+     */
+    default boolean isWeightedTsvector() {
+        return false;
+    }
+
 }

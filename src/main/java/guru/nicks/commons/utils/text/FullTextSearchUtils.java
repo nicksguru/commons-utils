@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.SequencedSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,6 +34,15 @@ public class FullTextSearchUtils {
      * Estimated length of the source field for generating n-grams.
      */
     private static final int ESTIMATED_FTS_AWARE_FIELD_LENGTH = 50;
+
+    /**
+     * Maximum lexeme position accepted by the Postgres {@code tsvector} input syntax - positions beyond it are
+     * rejected, so the weighted emission wraps the running counter back to 1.
+     *
+     * @see <a
+     *         href="https://www.postgresql.org/docs/current/datatype-textsearch.html#DATATYPE-TSVECTOR">tsvector</a>
+     */
+    private static final int MAX_TSVECTOR_POSITION = 16383;
 
     /**
      * UTF-8 bytes of the single-space separator inserted between kept supplier values, cached to avoid re-encoding it
@@ -99,6 +109,10 @@ public class FullTextSearchUtils {
     /**
      * Validates the tokenized words, then appends short words and ngrams into a pre-sized builder, stopping at the
      * first chunk that would exceed the length cap.
+     * <p>
+     * With {@link NgramUtilsConfig#isWeightedTsvector()} on, emits the weighted tsvector input format instead: every
+     * chunk is annotated as {@code 'chunk':positionWeight} with weight {@code A} for short words and prefix ngrams and
+     * weight {@code B} for infix ngrams (see {@link #buildWeightedFtsData}).
      *
      * @param source    builder holding joined search text to create chunks of
      * @param config    ngram utils configuration
@@ -115,6 +129,21 @@ public class FullTextSearchUtils {
         // This step also acts as a safeguard against SQL injection because it removes all punctuation.
         SortedSet<String> uniqueWords = TextUtils.collectUniqueWords(source.toString(), config.isReduceAccents());
 
+        return config.isWeightedTsvector()
+                ? buildWeightedFtsData(uniqueWords, config, maxLength)
+                : buildPlainFtsData(uniqueWords, config, maxLength);
+    }
+
+    /**
+     * Plain, unweighted emission: chunks separated by single spaces - the byte-identical behavior of the
+     * pre-weighted-format implementation.
+     *
+     * @param uniqueWords tokenized unique words to create chunks of
+     * @param config      ngram utils configuration
+     * @param maxLength   maximum length of the full-text search data
+     * @return length-capped space-separated chunk sequence
+     */
+    private static String buildPlainFtsData(Set<String> uniqueWords, NgramUtilsConfig config, int maxLength) {
         int minNgramLength = config.getMinNgramLength();
         int estimatedTotalLength = estimateFtsDataLength(config, minNgramLength, uniqueWords);
 
@@ -158,6 +187,71 @@ public class FullTextSearchUtils {
     }
 
     /**
+     * Weighted emission in the Postgres {@code tsvector} input syntax: every chunk is annotated with its 1-based
+     * position (wrapped at {@value #MAX_TSVECTOR_POSITION}, the maximum Postgres accepts) and a weight letter -
+     * {@code A} for short words and prefix ngrams, {@code B} for infix ngrams.
+     * <p>
+     * When Postgres casts the stored string to {@code tsvector}, the weights survive, and {@code ts_rank}'s default
+     * weight array makes an A-match worth 2.5 times a B-match - so prefix matches rank above infix ones. Chunk
+     * ordering, dedup and caps are identical to the plain format; only the annotation differs.
+     * <p>
+     * Chunks never contain quotes or punctuation (tokenization strips them), so uniform single-quoting of lexemes is
+     * safe.
+     *
+     * @param uniqueWords tokenized unique words to create chunks of
+     * @param config      ngram utils configuration
+     * @param maxLength   maximum length of the annotated full-text search data
+     * @return length-capped annotated chunk sequence, e.g. {@code 'gur':1A 'uru':2A 'nick':3B}
+     */
+    private static String buildWeightedFtsData(Set<String> uniqueWords, NgramUtilsConfig config, int maxLength) {
+        int minNgramLength = config.getMinNgramLength();
+
+        // the 'chunk':positionWeight annotation roughly doubles the flat size; the estimate is deliberately rough
+        int estimatedTotalLength = 2 * estimateFtsDataLength(config, minNgramLength, uniqueWords);
+        int estimatedCapacity = Math.clamp(
+                Math.max(ESTIMATED_FTS_BUILDER_CAPACITY, estimatedTotalLength),
+                0, maxLength);
+        var builder = new StringBuilder(estimatedCapacity);
+
+        // phase 1: short words - same filtering as the plain format, highest weight 'A' like prefix ngrams
+        boolean lengthCapReached = false;
+        int position = 0;
+
+        for (String word : uniqueWords) {
+            if (word.length() >= minNgramLength) {
+                continue;
+            }
+
+            // either English morph analysis is off or the word is not an English stop word (fast path - words are
+            // already lowercase and trimmed)
+            if (config.tryEnglishMorphAnalysis() && EnglishUtils.stopWord(word, true)) {
+                continue;
+            }
+
+            position = nextTsvectorPosition(position);
+            if (!appendWeightedFtsChunk(builder, word, true, position, maxLength)) {
+                lengthCapReached = true;
+                break;
+            }
+        }
+
+        // phase 2: weighted ngrams in creation order; skipped entirely if the length cap already stopped the
+        // short-words phase
+        if (!lengthCapReached) {
+            for (NgramUtils.WeightedNgram weightedNgram : NgramUtils.createWeightedNgrams(uniqueWords, config)) {
+                position = nextTsvectorPosition(position);
+
+                if (!appendWeightedFtsChunk(builder, weightedNgram.ngram(), weightedNgram.highPriority(),
+                        position, maxLength)) {
+                    break;
+                }
+            }
+        }
+
+        return builder.toString();
+    }
+
+    /**
      * Needed to pre-size {@link StringBuilder} to min(cap, estimate): never allocate past the DB cap. The estimate is
      * deliberately rough because {@link StringBuilder} grows gracefully when needed.
      *
@@ -192,6 +286,7 @@ public class FullTextSearchUtils {
      */
     public static SequencedSet<String> createFtsChunks(String text, NgramUtilsConfig config) {
         // tokenize once - both the short-words phase and ngram creation below reuse the same word set
+        // (this also removes punctuation and threfore the risk of SQL injection)
         SequencedSet<String> uniqueWords = TextUtils.collectUniqueWords(text, config.isReduceAccents());
 
         // add words that are shorter than the minimum ngram length, otherwise they'll be omitted
@@ -203,13 +298,6 @@ public class FullTextSearchUtils {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
         chunks.addAll(NgramUtils.createNgrams(uniqueWords, NgramUtils.Mode.ALL, config));
-
-        // this should never happen after the TextUtils call, but just in case
-        if (chunks.stream().anyMatch(ngram ->
-                ngram.contains("'") || ngram.contains("\"") || ngram.contains("--") || ngram.contains(";"))) {
-            throw new IllegalArgumentException("Invalid characters (SQL injection?) in search text");
-        }
-
         return chunks;
     }
 
@@ -236,6 +324,73 @@ public class FullTextSearchUtils {
 
         builder.append(chunk);
         return true;
+    }
+
+    /**
+     * Appends a single annotated chunk ({@code 'chunk':positionWeight}) with the same break-on-first-mismatch length
+     * cap semantics as {@link #appendFtsChunk}, the annotation counted as part of the chunk.
+     *
+     * @param builder      builder accumulating the annotated chunks
+     * @param chunk        chunk to append
+     * @param highPriority whether the chunk belongs to the high-priority (weight {@code A}) tier
+     * @param position     1-based wrapped tsvector position, as produced by {@link #nextTsvectorPosition(int)}
+     * @param maxLength    maximum length of the full-text search data
+     * @return {@code true} if the chunk fit and was appended, {@code false} if it would exceed the length cap
+     */
+    private static boolean appendWeightedFtsChunk(StringBuilder builder, String chunk, boolean highPriority,
+            int position, int maxLength) {
+        int separatorLength = builder.isEmpty() ? 0 : 1;
+        // quotes around the chunk, a colon, the position digits and the weight letter
+        int annotatedLength = separatorLength + chunk.length() + 4 + countPositionDigits(position);
+
+        // stop appending chunks as soon as the limit is reached (break, not skip)
+        if (builder.length() + annotatedLength > maxLength) {
+            return false;
+        }
+
+        if (!builder.isEmpty()) {
+            builder.append(' ');
+        }
+
+        builder.append('\'')
+                .append(chunk)
+                .append("':")
+                .append(position)
+                .append(highPriority ? 'A' : 'B');
+        return true;
+    }
+
+    /**
+     * Wraps the running position counter into the range 1..{@value #MAX_TSVECTOR_POSITION} accepted by the Postgres
+     * tsvector input syntax.
+     *
+     * @param position previous position (0 before the first chunk)
+     * @return next position, wrapped back to 1 after {@value #MAX_TSVECTOR_POSITION}
+     */
+    private static int nextTsvectorPosition(int position) {
+        return position % MAX_TSVECTOR_POSITION + 1;
+    }
+
+    /**
+     * @param position tsvector position, never exceeding {@value #MAX_TSVECTOR_POSITION}
+     * @return number of decimal digits of the position (at most 5, so no string allocation is needed for the check)
+     */
+    private static int countPositionDigits(int position) {
+        if (position < 10) {
+            return 1;
+        }
+
+        if (position < 100) {
+            return 2;
+        }
+
+        if (position < 1000) {
+            return 3;
+        }
+
+        return (position < 10000)
+                ? 4
+                : 5;
     }
 
     /**

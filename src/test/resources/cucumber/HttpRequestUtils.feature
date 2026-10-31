@@ -13,6 +13,8 @@ Feature: HTTP Request Utils
       | 400  | true    | BAD_REQUEST           |
       | 401  | true    | UNAUTHORIZED          |
       | 404  | true    | NOT_FOUND             |
+      | 413  | true    | CONTENT_TOO_LARGE     |
+      | 422  | true    | UNPROCESSABLE_CONTENT |
       | 500  | true    | INTERNAL_SERVER_ERROR |
 
   Scenario Outline: HTTP status resolution for special codes.

@@ -16,13 +16,13 @@ import okhttp3.Headers;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestOperations;
 
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
@@ -103,14 +103,14 @@ public class JwkUtils {
      * @return JWKS
      */
     @ConstraintArguments
-    public static JwkInfo fetchJwkSet(String authProviderId, String url, RestOperations restClient) {
+    public static JwkInfo fetchJwkSet(String authProviderId, String url, RestClient restClient) {
         checkNotBlank(authProviderId, _JwkUtilsFetchJwkSetArgumentsMeta.AUTHPROVIDERID.name());
         checkNotBlank(url, _JwkUtilsFetchJwkSetArgumentsMeta.URL.name());
         checkNotNull(restClient, _JwkUtilsFetchJwkSetArgumentsMeta.RESTCLIENT.name());
 
         log.debug("Fetching JWKS for auth provider '{}' from '{}'", authProviderId, url);
 
-        HttpEntity<String> response = fetchJwkSetResponse(url, restClient);
+        ResponseEntity<String> response = fetchJwkSetResponse(url, restClient);
         JWKSet jwkSet = parseAndValidateJwkSet(response, url);
 
         JwkInfo jwkInfo = JwkInfo.builder()
@@ -161,13 +161,16 @@ public class JwkUtils {
      * JWT-specific exceptions for consistent error handling.
      *
      * @param url        the URL endpoint from which to fetch the JWK set
-     * @param restClient the REST operations client used to perform the HTTP request
+     * @param restClient the REST client used to perform the HTTP request
      * @return the HTTP response entity containing the JWK set as a string body
      * @throws JwtException if the HTTP request fails or encounters any REST client errors
      */
-    private static HttpEntity<String> fetchJwkSetResponse(String url, RestOperations restClient) {
+    private static ResponseEntity<String> fetchJwkSetResponse(String url, RestClient restClient) {
         try {
-            return restClient.exchange(url, HttpMethod.GET, HttpEntity.EMPTY, String.class);
+            return restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .toEntity(String.class);
         } catch (RestClientException e) {
             throw new JwtException("Failed to fetch JWK set from '" + url + "': " + e.getMessage(), e);
         }

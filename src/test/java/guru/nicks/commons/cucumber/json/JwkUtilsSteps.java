@@ -19,12 +19,13 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.test.web.client.ExpectedCount;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -39,17 +40,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 public class JwkUtilsSteps {
 
-    @Mock
-    private RestTemplate restTemplate;
     @Mock
     private JWKSet jwkSet;
     @Mock
     private RSAPublicKey rsaPublicKey;
     private AutoCloseable closeableMocks;
+
     private MockedStatic<JWKSet> mockedJwkSetStatic;
+    private RestClient restClient;
 
     private List<JwkInfo> jwkInfos;
     private Optional<Instant> smallestExpirationDate;
@@ -135,12 +139,14 @@ public class JwkUtilsSteps {
     public void aJwkInfoWithRsaKeys() {
         // mock RSA key methods to facilitate stream operations performed in JwkUtils.createPublicKey
         var rsaKey1 = mock(RSAKey.class);
+        var mock1 = mock(RSAKey.class);
         when(rsaKey1.toRSAKey())
-                .thenReturn(mock(RSAKey.class));
+                .thenReturn(mock1);
 
         var rsaKey2 = mock(RSAKey.class);
+        var mock2 = mock(RSAKey.class);
         when(rsaKey2.toRSAKey())
-                .thenReturn(mock(RSAKey.class));
+                .thenReturn(mock2);
 
         // Setup JWKSet to return the RSA keys. Need explicit List<JWK> (not List<RSAKey>) for return by getKeys()
         // below - because its signature is List<JWK> and not List<? extends JWK>.
@@ -220,7 +226,7 @@ public class JwkUtilsSteps {
 
     @When("the JWK set is fetched")
     public void theJwkSetIsFetched() {
-        jwkInfo = JwkUtils.fetchJwkSet(authProviderId, jwkSetUrl, restTemplate);
+        jwkInfo = JwkUtils.fetchJwkSet(authProviderId, jwkSetUrl, restClient);
     }
 
     @Then("the JWK info should have an expiration date")
@@ -282,7 +288,7 @@ public class JwkUtilsSteps {
     }
 
     /**
-     * Helper method to mock the {@link RestTemplate} response returning a {@link JWKSet}.
+     * Helper method to mock the JWKS endpoint response returning a {@link JWKSet}.
      */
     private void setupMockJwkSetResponse() {
         // mock JWKSet
@@ -290,15 +296,14 @@ public class JwkUtilsSteps {
         when(jwkSet.size())
                 .thenReturn(2);
 
-        // create mock response entity with empty JSON for testing
-        var responseEntity = mock(ResponseEntity.class);
-        when(responseEntity.getBody())
-                .thenReturn("{}");
-        when(responseEntity.getHeaders())
-                .thenReturn(responseHeaders);
+        var builder = RestClient.builder();
+        MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
+        restClient = builder.build();
 
-        when(restTemplate.exchange(jwkSetUrl, HttpMethod.GET, HttpEntity.EMPTY, String.class))
-                .thenReturn(responseEntity);
+        mockServer.expect(ExpectedCount.once(), requestTo(jwkSetUrl))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON)
+                        .headers(responseHeaders));
 
         // mock the static JWKSet.parse method
         mockedJwkSetStatic.when(() -> JWKSet.parse(any(String.class)))
